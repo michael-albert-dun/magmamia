@@ -11,7 +11,6 @@
      colour-blind players. They also differ in shape: lava fills its cell,
      stacks sit inset on floor. The goal floor is teal, kept well away from
      the beige of the stacks that can cover it. */
-  --rim: #6e1a12;
   --floor: #b4b6ba;
   --floor-edge: #9c9ea3;
   --goal-floor: #8fcac4;
@@ -84,10 +83,6 @@ textarea {
   touch-action: manipulation;
 }
 
-.rim {
-  fill: var(--rim);
-}
-
 .cell-floor {
   fill: var(--floor);
   stroke: var(--floor-edge);
@@ -124,6 +119,13 @@ textarea {
 
 .cell-number.on-lava {
   fill: #ffffff;
+}
+
+.cell-number.on-rim {
+  fill: #ffffff;
+  fill-opacity: 0.7;
+  font-size: 24px;
+  font-weight: 400;
 }
 
 .cell-number.on-stack {
@@ -314,6 +316,10 @@ code {
   margin-top: 4px;
 }
 
+.info-panel .field-check + .field-check {
+  margin-top: 6px;
+}
+
 .info-panel .field-check {
   display: flex;
   align-items: center;
@@ -353,4 +359,36 @@ code {
 
 .controls > button[hidden] {
   display: none;
+}
+
+/* Push preview tags (see drawChips in render.js) */
+
+.preview-chip {
+  pointer-events: none;
+}
+
+.preview-chip rect {
+  fill: #fffdf6;
+  fill-opacity: 0.95;
+  stroke: var(--stack-edge);
+  stroke-width: 1.5;
+}
+
+.preview-chip text {
+  fill: #4a3512;
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+/* Blocks that would be lost off the edge: dashed and muted. */
+.preview-chip.is-lost rect {
+  stroke: #6c645b;
+  stroke-dasharray: 3 2;
+  fill-opacity: 0.8;
+}
+
+.preview-chip.is-lost text {
+  fill: #6c645b;
 }

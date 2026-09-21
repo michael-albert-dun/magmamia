@@ -83,8 +83,17 @@ floor, and the last two would reach the wall, so they pile onto that same stack.
   that lava and stacks differ in lightness and stay distinguishable for
   colour-blind players.
 - Numbers are always positive; the colour says whether a cell is lava or a stack.
-- Walls and the player are minimal placeholders for now; their look is a later
-  decision.
+- **Border**: a full tile of lava on every side, in the ordinary lava colour,
+  marked with ∞ where real lava shows its depth. It is the infinitely deep lava
+  that blocks are lost into.
+- **Push preview** (an option, off by default): with it on, standing next to a
+  stack shows a small `+n` tag in the corner of each cell its blocks would land
+  on (a wall pile is summed into one tag). Blocks that would be lost off the edge
+  get a dashed tag on the border tile. It shows one push ahead only, not a plan,
+  and is switched on in the game's info panel. It exists because it's easy to
+  assume a stack of 2 next to depth-2 lava fills it, when the second block
+  actually lands on the next cell. It's off by default because working out where
+  the blocks go is part of the puzzle.
 
 ## Objective
 

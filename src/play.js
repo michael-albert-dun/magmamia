@@ -1,7 +1,8 @@
 // The player-facing game: a level picker, the board, undo and restart. The
-// rules are in engine.js, the levels (CURATED_LEVELS) in levels.js and the
-// board drawing (drawBoard, CELL, RIM) in render.js, all loaded before this
-// file. bench.html is the developer's test bench, this is the game.
+// rules (move, previewPushes, isWon, ...) are in engine.js, the levels
+// (CURATED_LEVELS) in levels.js and the board drawing (drawBoard, CELL, RIM) in
+// render.js, all loaded before this file. bench.html is the developer's test
+// bench, this is the game.
 const KEY_DIRECTIONS = {
   ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
   w: "up", s: "down", a: "left", d: "right",
@@ -21,6 +22,7 @@ const REFUSAL_TEXT = {
 
 const SOLVED_KEY = "floorislava.solved.v1";
 const GENTLE_KEY = "floorislava.gentle.v1";
+const PREVIEW_KEY = "floorislava.preview.v1";
 
 const state = {
   levelIndex: 0,
@@ -30,13 +32,15 @@ const state = {
   message: "",
   messageKind: "",
   solved: new Set(), // Indexes of levels solved so far, remembered between visits.
-  gentle: false // Refuse lava moves instead of dying.
+  gentle: false, // Refuse lava moves instead of dying.
+  preview: false // Tag the cells a push would drop blocks on. Opt-in, off by default.
 };
 
 const elements = {
   infoButton: document.querySelector("#info-button"),
   infoPanel: document.querySelector("#info-panel"),
   gentle: document.querySelector("#gentle-lava"),
+  preview: document.querySelector("#show-preview"),
   levelNav: document.querySelector("#level-nav"),
   board: document.querySelector("#board"),
   status: document.querySelector("#status"),
@@ -48,10 +52,16 @@ const elements = {
 
 loadPreferences();
 elements.gentle.checked = state.gentle;
+elements.preview.checked = state.preview;
 elements.infoButton.addEventListener("click", toggleInfo);
 elements.gentle.addEventListener("change", () => {
   state.gentle = elements.gentle.checked;
   savePreference(GENTLE_KEY, state.gentle ? "1" : "0");
+});
+elements.preview.addEventListener("change", () => {
+  state.preview = elements.preview.checked;
+  savePreference(PREVIEW_KEY, state.preview ? "1" : "0");
+  render();
 });
 elements.undo.addEventListener("click", undo);
 elements.restart.addEventListener("click", restart);
@@ -76,6 +86,7 @@ function loadPreferences() {
     const solved = JSON.parse(window.localStorage.getItem(SOLVED_KEY) || "[]");
     if (Array.isArray(solved)) solved.forEach((i) => Number.isInteger(i) && state.solved.add(i));
     state.gentle = window.localStorage.getItem(GENTLE_KEY) === "1";
+    state.preview = window.localStorage.getItem(PREVIEW_KEY) === "1"; // Off unless turned on.
   } catch {
     /* No saved progress. */
   }
@@ -182,7 +193,9 @@ function handleBoardClick(event) {
 }
 
 function render() {
-  drawBoard(elements.board, state.current);
+  // Tags for where a push from here would drop blocks (see previewPushes).
+  const chips = state.preview && !isSolved() ? previewPushes(state.current).flatMap((push) => push.landings) : [];
+  drawBoard(elements.board, state.current, { chips });
   renderLevelNav();
   renderStatus();
   elements.undo.disabled = state.history.length === 0;

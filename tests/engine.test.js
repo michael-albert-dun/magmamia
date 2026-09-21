@@ -1,7 +1,7 @@
 // Run with: node --test tests/
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { parseLevel, formatLevel, move, isWon } = require("../src/engine.js");
+const { parseLevel, formatLevel, move, previewPushes, isWon } = require("../src/engine.js");
 
 // Apply each direction in turn (ignoring refusals and deaths) and return the
 // resulting level text.
@@ -132,4 +132,42 @@ test("objectives", () => {
   assert.equal(isWon(parseLevel("@*"), "reach"), true);
   assert.equal(isWon(parseLevel("@."), "reach"), false, "no goal, never won");
   assert.throws(() => isWon(level, "nope"), /Unknown objective/);
+});
+
+test("push previews show where each block would land", () => {
+  // The README's worked example: one block on each of two lava cells, and the
+  // last three piled on the cell before the wall.
+  const previews = previewPushes(parseLevel("@Eba.#"));
+  assert.equal(previews.length, 1);
+  assert.equal(previews[0].direction, "right");
+  assert.deepEqual(previews[0].landings, [
+    { x: 2, y: 0, count: 1, lost: false },
+    { x: 3, y: 0, count: 1, lost: false },
+    { x: 4, y: 0, count: 3, lost: false }
+  ]);
+});
+
+test("push previews put lost blocks on the border tile past the edge", () => {
+  const previews = previewPushes(parseLevel("@C."));
+  assert.deepEqual(previews[0].landings, [
+    { x: 2, y: 0, count: 1, lost: false },
+    { x: 3, y: 0, count: 2, lost: true }
+  ]);
+  // A stack right at the edge loses everything onto the tile just outside it.
+  assert.deepEqual(previewPushes(parseLevel("@B"))[0].landings, [{ x: 2, y: 0, count: 2, lost: true }]);
+});
+
+test("push previews skip stacks that can't be pushed and cover every adjacent stack", () => {
+  assert.deepEqual(previewPushes(parseLevel("@C#")), []);
+  assert.deepEqual(previewPushes(parseLevel("@..")), []);
+  const both = previewPushes(parseLevel("...\nA@A\n..."));
+  assert.deepEqual(both.map((p) => p.direction).sort(), ["left", "right"]);
+});
+
+test("push previews agree with what a push actually does", () => {
+  const state = parseLevel("..a..\n.@C.b\n.....");
+  const [preview] = previewPushes(state);
+  const outcome = move(state, preview.direction);
+  const landedCells = new Set(preview.landings.filter((l) => !l.lost).map((l) => l.y * state.cols + l.x));
+  assert.deepEqual([...landedCells].sort(), [...new Set(outcome.drops.filter((d) => d >= 0))].sort());
 });

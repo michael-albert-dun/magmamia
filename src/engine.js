@@ -1,6 +1,6 @@
 // Pure rules for the lava-and-blocks puzzle -- no DOM. Shared by the browser
-// test bench (src/game.js) and by tests/experiments run directly in Node, so
-// both always agree on what the rules are. See README.md for the design.
+// game (src/play.js), the test bench (src/bench.js) and by tests/experiments run
+// directly in Node, so all of them always agree on what the rules are. See README.md for the design.
 //
 // A state is { rows, cols, cells, walls, goals, player }:
 //   cells   signed height per cell: > 0 is a stack, < 0 is lava (depth is the
@@ -177,6 +177,45 @@ function pushStack(state, target, nx, ny, dx, dy) {
   return { result: "pushed", state: { ...state, cells, player: target }, height, drops };
 }
 
+// For each stack the player could push right now, where its blocks would land,
+// for drawing a preview. Returns [{ direction, landings }] where each landing is
+// { x, y, count, lost }: `count` blocks land on that cell (a wall pile counts
+// several on one cell). Blocks lost off the board are reported as one landing
+// with lost: true on the first tile outside the board along the push line, so x
+// or y may be -1 or the board size. Stacks that can't be pushed (against a wall)
+// are left out.
+function previewPushes(state) {
+  const px = state.player % state.cols;
+  const py = Math.floor(state.player / state.cols);
+  const previews = [];
+  for (const name of Object.keys(DIRECTIONS)) {
+    const { dx, dy } = DIRECTIONS[name];
+    const nx = px + dx;
+    const ny = py + dy;
+    if (!inBounds(state, nx, ny) || state.cells[ny * state.cols + nx] <= 0) continue;
+    const outcome = move(state, name);
+    if (outcome.result !== "pushed") continue;
+    const counts = new Map();
+    let lost = 0;
+    for (const landing of outcome.drops) {
+      if (landing < 0) lost += 1;
+      else counts.set(landing, (counts.get(landing) || 0) + 1);
+    }
+    const landings = [...counts].map(([index, count]) => ({ x: index % state.cols, y: Math.floor(index / state.cols), count, lost: false }));
+    if (lost > 0) {
+      let x = nx;
+      let y = ny;
+      while (inBounds(state, x, y)) {
+        x += dx;
+        y += dy;
+      }
+      landings.push({ x, y, count: lost, lost: true });
+    }
+    previews.push({ direction: name, landings });
+  }
+  return previews;
+}
+
 function isWon(state, objective) {
   if (objective === "reach") return state.goals[state.player] === 1;
   if (objective === "lava") return state.cells.every((value) => value >= 0);
@@ -185,5 +224,5 @@ function isWon(state, objective) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { DIRECTIONS, OBJECTIVES, MAX_LEVEL_HEIGHT, parseLevel, formatLevel, move, isWon };
+  module.exports = { DIRECTIONS, OBJECTIVES, MAX_LEVEL_HEIGHT, parseLevel, formatLevel, move, previewPushes, isWon };
 }
