@@ -219,7 +219,8 @@ undo, R to restart), the on-screen arrows, or clicking a cell next to the player
 - `src/render.js`: board drawing shared by both pages.
 - `src/play.js`, `index.html`: the game. `src/bench.js`, `bench.html`: the bench.
 - `styles.css`: styles for both pages.
-- `experiments/find-levels.js`: the level search.
+- `experiments/find-levels.js`: the level search. `experiments/results/`: what its
+  runs have found.
 - `tests/`: run with `node --test tests/`. `tests/solve.js` is a separate
   step-by-step breadth-first solver, used as an independent check on the
   push-level solver.
@@ -248,6 +249,11 @@ node experiments/find-levels.js --seed 1 --restarts 10 --steps 400 --top 10 --ve
 ```
 
 The filters and score weights are guesses to be tuned by playing the results.
+The first long run (six seeds, 110 minutes each, about 870,000 levels) is written
+up in `experiments/results/2026-09-21-ring-search.md`, with the data alongside. Its
+main finding: the tightness filter (slack of at most 2) is the bottleneck, so only
+11 levels passed, and many of those were very punishing (six had 90% or more of
+their positions already lost). Four of them are levels 9 to 12 of the game.
 Large state spaces are the main cost: stack-heavy boards can exceed the search's
 state cap, and those levels are discarded.
 

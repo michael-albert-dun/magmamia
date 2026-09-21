@@ -1,0 +1,202 @@
+{
+  "run": {
+    "date": "2026-09-21",
+    "command": "node experiments/find-levels.js --seed <101..106> --restarts 500 --steps 500 --top 40 --max-minutes 110",
+    "filters": {
+      "minPushes": 6,
+      "maxSlack": 2,
+      "maxSolutions": 3,
+      "decorativePieces": 0,
+      "minEvents": 1
+    },
+    "board": "6x6 interior inside a border ring of infinite lava (~) or wall (#), 8x8 in all",
+    "evaluations": 870000,
+    "levelsPassing": 11
+  },
+  "levels": [
+    {
+      "rank": 1,
+      "seed": 106,
+      "score": 58,
+      "pushes": 15,
+      "optimalSolutions": 2,
+      "slack": 0,
+      "deadEndShare": 0.9838245586748581,
+      "firstPushes": 1,
+      "livePushes": 1,
+      "events": [
+        "stack",
+        "edge",
+        "pile"
+      ],
+      "states": 12859,
+      "text": "~~~~~~~~\n~a.a.b.~\n~.C....~\n~.Aa.ac*~\n~B...a.~\n~@#a...~\n~a.....~\n~~~~~~~~"
+    },
+    {
+      "rank": 2,
+      "seed": 101,
+      "score": 55,
+      "pushes": 12,
+      "optimalSolutions": 1,
+      "slack": 0,
+      "deadEndShare": 0.9826760044231478,
+      "firstPushes": 8,
+      "livePushes": 3,
+      "events": [
+        "stack",
+        "pile"
+      ],
+      "states": 5426,
+      "text": "~~~~~~~~\n~b*#....~\n~b...A.~\n~.B.#A.~\n~..b...~\n~.b....~\n~.@....~\n~~~~~~~~"
+    },
+    {
+      "rank": 3,
+      "seed": 101,
+      "score": 53,
+      "pushes": 17,
+      "optimalSolutions": 1,
+      "slack": 1,
+      "deadEndShare": 0.9861986198619862,
+      "firstPushes": 1,
+      "livePushes": 1,
+      "events": [
+        "stack",
+        "edge"
+      ],
+      "states": 3333,
+      "text": "~~~~~~~~\n~@.....~\n~#....b~\n~.Bcac.~\n~....Da~\n~..b...~\n~..b..a*~\n~~~~~~~~"
+    },
+    {
+      "rank": 4,
+      "seed": 101,
+      "score": 49,
+      "pushes": 13,
+      "optimalSolutions": 1,
+      "slack": 1,
+      "deadEndShare": 0.9064486830154406,
+      "firstPushes": 3,
+      "livePushes": 1,
+      "events": [
+        "stack"
+      ],
+      "states": 2202,
+      "text": "~~~~~~~~\n~..cd..~\n~...A..~\n~ab*....~\n~.a.#.a~\n~..#.C@~\n~......~\n~~~~~~~~"
+    },
+    {
+      "rank": 5,
+      "seed": 106,
+      "score": 48,
+      "pushes": 10,
+      "optimalSolutions": 1,
+      "slack": 0,
+      "deadEndShare": 0.9694148936170213,
+      "firstPushes": 1,
+      "livePushes": 1,
+      "events": [
+        "pile",
+        "stack",
+        "edge"
+      ],
+      "states": 752,
+      "text": "~~~~~~~~\n~...c.a*~\n~......~\n~...aCc#\n~....AB~\n~..#.b.~\n~...c.@~\n~~~~~~~~"
+    },
+    {
+      "rank": 6,
+      "seed": 103,
+      "score": 44,
+      "pushes": 10,
+      "optimalSolutions": 1,
+      "slack": 0,
+      "deadEndShare": 0.7285714285714286,
+      "firstPushes": 5,
+      "livePushes": 1,
+      "events": [
+        "edge"
+      ],
+      "states": 70,
+      "text": "~~~~~~~~\n~..#...~\n~.#a*...~\n~......~\n~bC....~\n~......~\n#.Aa..@~\n~~~~~~~~"
+    },
+    {
+      "rank": 7,
+      "seed": 106,
+      "score": 43,
+      "pushes": 10,
+      "optimalSolutions": 1,
+      "slack": 0,
+      "deadEndShare": 0.9331941544885177,
+      "firstPushes": 1,
+      "livePushes": 1,
+      "events": [
+        "stack",
+        "pile"
+      ],
+      "states": 479,
+      "text": "~~~~~~~~\n~.....a~\n~a...B.~\n~A#b...#\n~..#.a.~\n~..a..b*~\n~@.a...~\n~~~~~~~~"
+    },
+    {
+      "rank": 8,
+      "seed": 101,
+      "score": 42,
+      "pushes": 9,
+      "optimalSolutions": 1,
+      "slack": 1,
+      "deadEndShare": 0.8509316770186335,
+      "firstPushes": 3,
+      "livePushes": 1,
+      "events": [
+        "edge",
+        "stack"
+      ],
+      "states": 2093,
+      "text": "~~~~~~~~\n~...a..~\n~......~\n~..@...~\n~.Dd.c#~\n~...c.*.~\n~b...a.~\n~~~~~~~~"
+    },
+    {
+      "rank": 9,
+      "seed": 105,
+      "score": 38,
+      "pushes": 8,
+      "optimalSolutions": 1,
+      "slack": 0,
+      "deadEndShare": 0.8417225950782998,
+      "firstPushes": 5,
+      "livePushes": 2,
+      "events": [
+        "stack"
+      ],
+      "states": 1788,
+      "text": "~~~~~~~~\n~a*ca...~\n~..cB..~\n~A.....~\n~b.....~\n~......~\n~@.....~\n~~~~~~~~"
+    },
+    {
+      "rank": 10,
+      "seed": 103,
+      "score": 37.83007499855769,
+      "pushes": 11,
+      "optimalSolutions": 3,
+      "slack": 0,
+      "deadEndShare": 0.7407407407407407,
+      "firstPushes": 1,
+      "livePushes": 1,
+      "events": [
+        "edge"
+      ],
+      "states": 54,
+      "text": "~~~~~~~~\n~...#..~\n~b.@C..~\n~..a...~\n~a*a....~\n~......~\n~......~\n~~~~~~~~"
+    },
+    {
+      "rank": 11,
+      "seed": 103,
+      "score": 31,
+      "pushes": 7,
+      "optimalSolutions": 1,
+      "slack": 0,
+      "deadEndShare": 0.6545454545454545,
+      "firstPushes": 2,
+      "livePushes": 1,
+      "events": [
+        "edge"
+      ],
+      "states": 55,
+      "text": "~~~~~~~~\n~a.a...~\n~BAaa*..~\n~.aE.@.~\n~a.....~\n~......~\n~......~\n~~~~~~~~"
+    }
+  ]
+}

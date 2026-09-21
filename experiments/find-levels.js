@@ -9,7 +9,11 @@
 //
 // Options: --size N (interior is N by N, default 6), --min-pushes, --max-slack,
 // --max-solutions (filters for what gets reported), --json FILE (write the
-// reported levels there as well).
+// reported levels there as well; it is rewritten after every restart, so an
+// interrupted run keeps what it found), --max-minutes N (stop starting new work
+// after N minutes). Each restart contributes only its best passing level, since
+// a climb that has found a good level tends to drift sideways through many
+// near-copies of it.
 const fs = require("fs");
 const { formatLevel } = require("../src/engine.js");
 const { analyse, solutionEvents } = require("../src/solver.js");
@@ -22,6 +26,7 @@ const SEED = Number(args.seed ?? 1);
 const RESTARTS = Number(args.restarts ?? 40);
 const STEPS = Number(args.steps ?? 400);
 const TOP = Number(args.top ?? 12);
+const MAX_MINUTES = Number(args["max-minutes"] ?? Infinity);
 const MIN_PUSHES = Number(args["min-pushes"] ?? 6);
 const MAX_SLACK = Number(args["max-slack"] ?? 2);
 const MAX_SOLUTIONS = Number(args["max-solutions"] ?? 3);
@@ -192,14 +197,26 @@ function evaluate(level) {
   return { score, passes, pushes: r.pushes, solutions: r.optimalCount, slack: r.slack, decorative, events: [...events].sort(), tempting, dead: r.deadFraction, states: r.states };
 }
 
-const found = new Map(); // level text -> { level, result }
+const found = new Map(); // level text -> { level, result }; at most one per restart
 let evaluations = 0;
 const started = Date.now();
+const outOfTime = () => (Date.now() - started) / 60000 >= MAX_MINUTES;
 
-for (let restart = 0; restart < RESTARTS; restart += 1) {
+function report(final) {
+  const ranked = [...found.entries()].sort((a, b) => b[1].result.score - a[1].result.score).slice(0, TOP);
+  if (args.json) fs.writeFileSync(args.json, JSON.stringify(ranked.map(([text, { result }]) => ({ text, ...result })), null, 2));
+  if (!final) return;
+  console.log(`seed ${SEED}: ${evaluations} evaluations in ${((Date.now() - started) / 1000).toFixed(1)}s, ${found.size} levels pass the filters\n`);
+  for (const [text, { result }] of ranked) {
+    console.log(`score ${result.score.toFixed(1)}  pushes ${result.pushes}  solutions ${result.solutions}  slack ${result.slack}  tempting ${result.tempting}  dead ${(result.dead * 100).toFixed(0)}%  events ${result.events.join(",")}  states ${result.states}`);
+    console.log(text + "\n");
+  }
+}
+
+for (let restart = 0; restart < RESTARTS && !outOfTime(); restart += 1) {
   let current = null;
   let currentResult = null;
-  for (let tries = 0; tries < 3000 && !currentResult; tries += 1) {
+  for (let tries = 0; tries < 3000 && !currentResult && !outOfTime(); tries += 1) {
     const candidate = randomLevel();
     const result = evaluate(candidate);
     evaluations += 1;
@@ -210,7 +227,8 @@ for (let restart = 0; restart < RESTARTS; restart += 1) {
   }
   if (!currentResult) continue;
   let best = currentResult;
-  for (let step = 0; step < STEPS; step += 1) {
+  let bestPassing = null;
+  for (let step = 0; step < STEPS && !outOfTime(); step += 1) {
     const candidate = mutate(current);
     if (!candidate) continue;
     const result = evaluate(candidate);
@@ -219,15 +237,10 @@ for (let restart = 0; restart < RESTARTS; restart += 1) {
     current = candidate;
     currentResult = result;
     best = result;
-    if (result.passes) found.set(formatLevel(candidate), { level: candidate, result });
+    if (result.passes && (!bestPassing || result.score > bestPassing.result.score)) bestPassing = { level: candidate, result };
   }
-  if (args.verbose) console.log(`restart ${restart}: best score ${best.score.toFixed(1)} pushes ${best.pushes} solutions ${best.solutions} slack ${best.slack} decorative ${best.decorative} events [${best.events}] tempting ${best.tempting}`);
+  if (bestPassing) found.set(formatLevel(bestPassing.level), bestPassing);
+  if (args.verbose) console.log(`restart ${restart}: best score ${best.score.toFixed(1)} pushes ${best.pushes} solutions ${best.solutions} slack ${best.slack} decorative ${best.decorative} events [${best.events}] tempting ${best.tempting}${bestPassing ? "  PASSES" : ""}  (${((Date.now() - started) / 60000).toFixed(1)} min, ${found.size} kept)`);
+  report(false);
 }
-
-const ranked = [...found.entries()].sort((a, b) => b[1].result.score - a[1].result.score).slice(0, TOP);
-console.log(`seed ${SEED}: ${evaluations} evaluations in ${((Date.now() - started) / 1000).toFixed(1)}s, ${found.size} levels pass the filters\n`);
-for (const [text, { result }] of ranked) {
-  console.log(`score ${result.score.toFixed(1)}  pushes ${result.pushes}  solutions ${result.solutions}  slack ${result.slack}  tempting ${result.tempting}  dead ${(result.dead * 100).toFixed(0)}%  events ${result.events.join(",")}  states ${result.states}`);
-  console.log(text + "\n");
-}
-if (args.json) fs.writeFileSync(args.json, JSON.stringify(ranked.map(([text, { result }]) => ({ text, ...result })), null, 2));
+report(true);
