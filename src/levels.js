@@ -59,7 +59,8 @@ const PRESET_LEVELS = [
 
 // The levels in the player-facing game. All are "reach the goal" levels, each
 // checked by tests/levels.test.js. The first three are short hand-made intros; the
-// rest were found by experiments/find-levels.js (seed and measurements noted).
+// rest were found by experiments/find-levels.js (seed and measurements noted;
+// the full results are in experiments/results/).
 const CURATED_LEVELS = [
   { text: PRESET_LEVELS[0].text },
   {
@@ -140,6 +141,58 @@ const CURATED_LEVELS = [
       "~......~",
       "~...Bb.~",
       "~..Cb..~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 103 (ring search 2026-09-21, rank #11): 7 pushes, 1 optimal solution, slack 0; 65% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~a.a...~",
+      "~BAaa*..~",
+      "~.aE.@.~",
+      "~a.....~",
+      "~......~",
+      "~......~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 105 (ring search 2026-09-21, rank #9): 8 pushes, 1 optimal solution, slack 0; 84% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~a*ca...~",
+      "~..cB..~",
+      "~A.....~",
+      "~b.....~",
+      "~......~",
+      "~@.....~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 103 (ring search 2026-09-21, rank #6): 10 pushes, 1 optimal solution, slack 0; 73% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~..#...~",
+      "~.#a*...~",
+      "~......~",
+      "~bC....~",
+      "~......~",
+      "#.Aa..@~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 103 (ring search 2026-09-21, rank #10): 11 pushes, 3 optimal solutions, slack 0; 74% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~...#..~",
+      "~b.@C..~",
+      "~..a...~",
+      "~a*a....~",
+      "~......~",
+      "~......~",
       "~~~~~~~~"
     ].join("\n")
   }
