@@ -1,0 +1,155 @@
+// Building levels by running the game backwards -- no DOM, Node only. Used by
+// experiments/find-levels.js; see README.md ("Finding levels").
+//
+// A forward push adds one block to each cell it lands on, so the reverse of a
+// push takes one block away from each of those cells (a floor cell becomes lava
+// of depth 1, a stack gets shorter, lava gets deeper) and puts the stack back.
+// Starting from a cleared board and applying a few reverse pushes therefore
+// makes a level that is solvable by construction, with lava and blocks in
+// balance. The result isn't necessarily *optimally* solved by the sequence it
+// was built with: the solver still finds the true fewest pushes.
+//
+// Blocks lost into infinite lava are the one place blocks are created from
+// nothing: a reverse push may have blocks fly into an infinite lava cell, which
+// means the finished level has surplus blocks that have to be thrown away. A
+// wall the stack topples towards is the other special case: the reverse of
+// blocks piling on the cell before it.
+
+const { DIRECTIONS } = require("./engine.js");
+
+const DIRECTION_NAMES = Object.keys(DIRECTIONS);
+
+// Build one level. `rng` is a function returning a number in [0, 1).
+// Returns { level, sequence, lastStackCell } where sequence is the forward
+// pushes that solve it, as [{ from, dir }] (push in direction `dir` while
+// standing on cell `from`), in the order to play them.
+//
+// options: size (interior is size by size, default 6), ringWallChance (chance a
+// border cell is wall rather than infinite lava, default 0.12), interiorWalls
+// (max walls inside, default 3), minPushes / maxPushes (how many reverse pushes,
+// default 5 to 10), objective ("reach" places a goal where the finished board's
+// player region is; "lava" and "all" have none), maxLavaDepth (4), maxStackHeight (5).
+// Returns null if it couldn't build a level (callers just try again).
+function buildByReversal(rng, options = {}) {
+  const size = options.size ?? 6;
+  const grid = size + 2;
+  const ringWallChance = options.ringWallChance ?? 0.12;
+  const maxWalls = options.interiorWalls ?? 3;
+  const minPushes = options.minPushes ?? 5;
+  const maxPushes = options.maxPushes ?? 10;
+  const objective = options.objective ?? "reach";
+  const maxLava = options.maxLavaDepth ?? 4;
+  const maxStack = options.maxStackHeight ?? 5;
+
+  const randInt = (lo, hi) => lo + Math.floor(rng() * (hi - lo + 1));
+  const n = grid * grid;
+  const isRing = (i) => {
+    const x = i % grid;
+    const y = Math.floor(i / grid);
+    return x === 0 || y === 0 || x === grid - 1 || y === grid - 1;
+  };
+
+  const cells = new Int16Array(n);
+  const walls = new Uint8Array(n);
+  const abyss = new Uint8Array(n);
+  const goals = new Uint8Array(n);
+  for (let i = 0; i < n; i += 1) {
+    if (!isRing(i)) continue;
+    if (rng() < ringWallChance) walls[i] = 1;
+    else abyss[i] = 1;
+  }
+  const interior = [];
+  for (let i = 0; i < n; i += 1) if (!isRing(i)) interior.push(i);
+  for (let k = randInt(0, maxWalls); k > 0; k -= 1) walls[interior[Math.floor(rng() * interior.length)]] = 1;
+  const open = interior.filter((i) => !walls[i]);
+  if (open.length < 6) return null;
+
+  let player = open[Math.floor(rng() * open.length)];
+  const walkable = (i) => !walls[i] && !abyss[i] && cells[i] === 0;
+  const regionFrom = (start) => {
+    const seen = new Set([start]);
+    const stack = [start];
+    while (stack.length > 0) {
+      const c = stack.pop();
+      for (const name of DIRECTION_NAMES) {
+        const { dx, dy } = DIRECTIONS[name];
+        const x = (c % grid) + dx;
+        const y = Math.floor(c / grid) + dy;
+        if (x < 0 || y < 0 || x >= grid || y >= grid) continue;
+        const nb = y * grid + x;
+        if (seen.has(nb) || !walkable(nb)) continue;
+        seen.add(nb);
+        stack.push(nb);
+      }
+    }
+    return [...seen];
+  };
+
+  const target = randInt(minPushes, maxPushes);
+  const sequence = []; // Built backwards, so pushes are added to the front.
+  let lastStackCell = -1;
+  for (let done = 0, attempts = 0; done < target && attempts < 200; attempts += 1) {
+    const region = regionFrom(player);
+    const q = region[Math.floor(rng() * region.length)];
+    const name = DIRECTION_NAMES[Math.floor(rng() * DIRECTION_NAMES.length)];
+    const { dx, dy } = DIRECTIONS[name];
+
+    // The cells the stack would topple over: interior cells until a wall or the
+    // infinite lava at the border ends the line.
+    const line = [];
+    let x = (q % grid) + dx;
+    let y = Math.floor(q / grid) + dy;
+    let end = "none"; // "wall" or "abyss" once the line stops.
+    while (x >= 0 && y >= 0 && x < grid && y < grid) {
+      const i = y * grid + x;
+      if (walls[i]) { end = "wall"; break; }
+      if (abyss[i]) { end = "abyss"; break; }
+      line.push(i);
+      if (line.length >= maxStack) break;
+      x += dx;
+      y += dy;
+    }
+    // A stack right against a wall can't be pushed at all.
+    if (line.length === 0 && end !== "abyss") continue;
+
+    const height = randInt(1, maxStack);
+    const m = line.length;
+    // How many blocks each line cell received going forwards.
+    const received = line.map(() => 0);
+    for (let k = 0; k < Math.min(height, m); k += 1) received[k] += 1;
+    if (height > m && end === "wall") received[m - 1] += height - m; // The pile against the wall.
+    // (Blocks past the end of an abyss-ended line are simply lost.)
+    if (height > m && end === "none") continue; // The line was cut short by the height cap.
+
+    const behind = q - (dy * grid + dx);
+    const bx = behind % grid;
+    const by = Math.floor(behind / grid);
+    if (bx < 0 || by < 0 || bx >= grid || by >= grid || !walkable(behind)) continue;
+    if (line.some((i, k) => received[k] > 0 && cells[i] - received[k] < -maxLava)) continue;
+
+    line.forEach((i, k) => { cells[i] -= received[k]; });
+    cells[q] = height;
+    sequence.unshift({ from: behind, dir: name });
+    if (lastStackCell < 0) lastStackCell = q;
+    player = behind;
+    done += 1;
+  }
+  if (sequence.length < minPushes) return null;
+
+  if (objective === "reach") {
+    // The finished board's player region is where the goal has to be for the
+    // last push to win. Regions are computed on the fully cleared board.
+    const clearedCells = new Int16Array(n);
+    const saved = cells.slice();
+    cells.set(clearedCells);
+    const region = regionFrom(lastStackCell).filter((i) => !isRing(i));
+    cells.set(saved);
+    if (region.length === 0) return null;
+    goals[region[Math.floor(rng() * region.length)]] = 1;
+  }
+  return { level: { rows: grid, cols: grid, cells, walls, abyss, goals, player }, sequence, lastStackCell };
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { buildByReversal };
+}
