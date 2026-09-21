@@ -269,3 +269,88 @@ textarea {
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+
+/* The player-facing game (index.html) */
+
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.game-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.icon-button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.info-panel {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 0.92rem;
+}
+
+.info-panel ul {
+  margin: 0 0 10px;
+  padding-left: 1.2em;
+}
+
+.info-panel li + li {
+  margin-top: 4px;
+}
+
+.info-panel .field-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.level-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.level-button {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.level-button.is-solved {
+  border-color: var(--stack-edge);
+  background: #f6ecd0;
+}
+
+.level-button.is-current {
+  border-color: var(--ink);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.controls > button[hidden] {
+  display: none;
+}

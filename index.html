@@ -5,30 +5,49 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f1ec">
-  <title>The floor is lava — test bench</title>
-  <link rel="stylesheet" href="styles.css?v=20260921b">
-  <script src="src/engine.js?v=20260921b" defer></script>
-  <script src="src/levels.js?v=20260921b" defer></script>
-  <script src="src/game.js?v=20260921b" defer></script>
+  <title>The floor is lava</title>
+  <link rel="stylesheet" href="styles.css?v=20260921f">
+  <script src="src/engine.js?v=20260921f" defer></script>
+  <script src="src/levels.js?v=20260921f" defer></script>
+  <script src="src/render.js?v=20260921f" defer></script>
+  <script src="src/play.js?v=20260921f" defer></script>
 </head>
 
 <body>
   <main class="app">
-    <section class="play-area">
-      <div class="masthead">
+    <section class="play-area game">
+      <header class="game-header">
         <h1>The floor is lava</h1>
-        <p class="subtitle">Rules test bench — working title, not the real game yet</p>
+        <button id="info-button" class="icon-button" type="button" aria-label="How to play" aria-expanded="false" aria-controls="info-panel">i</button>
+      </header>
+
+      <div id="info-panel" class="info-panel" hidden>
+        <ul>
+          <li>Reach the crown.</li>
+          <li>Walk with the arrow keys or WASD, the buttons below, or by tapping a square next to you.</li>
+          <li>Walk into a stack of blocks to push it over. It topples away from you and drops one block on each of the next squares in a line, as many as the stack was tall.</li>
+          <li>A block dropped on lava makes it one shallower; lava with nothing left is safe floor. Blocks that fall off the edge are lost, and blocks that hit a wall pile up against it.</li>
+          <li>Blocks can land on the crown and cover it. Push them off to uncover it.</li>
+          <li>Stepping into lava, or off the edge, is fatal: the level restarts. There is no limit on undo.</li>
+        </ul>
+        <label class="field-check">
+          <input id="gentle-lava" type="checkbox">
+          <span>Gentle lava: refuse the move instead of dying</span>
+        </label>
       </div>
 
-      <p id="objective" class="objective"></p>
+      <nav id="level-nav" class="level-nav" aria-label="Levels"></nav>
+
       <div id="board-wrap" class="board-wrap">
         <svg id="board" class="board" role="img" aria-label="Game board"></svg>
       </div>
+
       <p id="status" class="status" aria-live="polite"></p>
 
       <div class="controls">
         <button id="undo-button" type="button">Undo</button>
         <button id="restart-button" type="button">Restart</button>
+        <button id="next-button" type="button" hidden>Next level</button>
         <div class="dpad" aria-label="Move">
           <button class="dpad-up" data-dir="up" type="button" aria-label="Move up">↑</button>
           <button class="dpad-left" data-dir="left" type="button" aria-label="Move left">←</button>
@@ -36,45 +55,6 @@
           <button class="dpad-right" data-dir="right" type="button" aria-label="Move right">→</button>
         </div>
       </div>
-      <p class="keys-hint">Arrow keys or WASD to move, Z to undo, R to restart. Or click a cell next to the player.</p>
-
-      <details class="panel" open>
-        <summary>Settings</summary>
-        <label class="field">
-          <span>Objective</span>
-          <select id="objective-select"></select>
-        </label>
-        <label class="field field-check">
-          <input id="lava-fatal" type="checkbox" checked>
-          <span>Lava is fatal (otherwise the move is refused)</span>
-        </label>
-      </details>
-
-      <details class="panel" open>
-        <summary>Levels</summary>
-        <label class="field">
-          <span>Preset</span>
-          <select id="preset-select"></select>
-        </label>
-        <label class="field">
-          <span>Level text</span>
-          <textarea id="level-text" rows="7" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
-        </label>
-        <div class="button-row">
-          <button id="load-button" type="button">Load this level</button>
-        </div>
-        <p id="level-error" class="level-error" role="alert" hidden></p>
-        <p class="legend">
-          <code>.</code> floor &nbsp; <code>#</code> wall &nbsp; <code>@</code> player &nbsp;
-          <code>a</code>–<code>z</code> lava depth 1–26 &nbsp; <code>A</code>–<code>Z</code> stack height 1–26 &nbsp;
-          <code>*</code> after a cell marks a goal
-        </p>
-      </details>
-
-      <details class="panel">
-        <summary>Current position as text</summary>
-        <pre id="current-text" class="current-text"></pre>
-      </details>
     </section>
   </main>
 </body>

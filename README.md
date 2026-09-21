@@ -170,20 +170,52 @@ http://127.0.0.1:4176/
 The app is plain HTML, CSS, and JavaScript. There is no build step, and it fetches
 no data files, so opening `index.html` directly also works.
 
-The page is a rules test bench, not the real game yet. It has preset levels, a
-box to type in your own level text, an objective picker, a setting for whether
-lava is fatal, unlimited undo, and restart. Controls are the arrow keys or WASD
-(Z to undo, R to restart), the on-screen arrows, or clicking a cell next to the
-player.
+`index.html` is the game: a short set of curated "reach the crown" levels, a level
+picker (solved levels are remembered in the browser), undo, restart, and a
+collapsed how-to-play. `bench.html` is the rules test bench: type in any level,
+pick the objective, and try things out. Controls are the arrow keys or WASD (Z to
+undo, R to restart), the on-screen arrows, or clicking a cell next to the player.
 
 ## Files
 
 - `src/engine.js`: the rules, with no DOM: level parsing and printing, `move`,
   and objective checks. Also loadable from Node with `require`.
-- `src/levels.js`: the preset levels.
-- `src/game.js`, `index.html`, `styles.css`: the test bench UI.
-- `tests/`: run with `node --test tests/`. `tests/solve.js` is a breadth-first
-  solver used to check that every preset level is solvable.
+- `src/solver.js`: exact push-level solver and level analysis (see "Finding
+  levels"). Also loadable from Node.
+- `src/levels.js`: the test bench presets and the curated levels for the game.
+- `src/render.js`: board drawing shared by both pages.
+- `src/play.js`, `index.html`: the game. `src/bench.js`, `bench.html`: the bench.
+- `styles.css`: styles for both pages.
+- `experiments/find-levels.js`: the level search.
+- `tests/`: run with `node --test tests/`. `tests/solve.js` is a separate
+  step-by-step breadth-first solver, used as an independent check on the
+  push-level solver.
+
+## Finding levels
+
+`src/solver.js` searches over pushes rather than steps: between pushes the player
+can walk anywhere in their connected patch of floor, so a state is the board plus
+which patch the player is in. For a level it reports whether the goal can be
+reached, the fewest pushes, how many distinct optimal push sequences there are,
+the *slack* (the most blocks that can be left over in any winning position, where
+0 means every solution uses every block), how many first pushes leave the level
+solvable, and what share of reachable positions are dead ends. It also lists any
+unusual events in a solution: covering the goal, piling against a wall, landing
+on an existing stack, or losing blocks off the edge.
+
+`experiments/find-levels.js` starts from random 6 by 6 boards and hill-climbs on a
+score built from those measurements, keeping levels that meet the filters: at
+least 6 pushes, slack of at most 2 ("tightish"), at most 3 optimal solutions,
+no decorative pieces (a stack, lava cell or wall whose removal doesn't change the
+fewest pushes), and at least one unusual event. Run it with, for example:
+
+```sh
+node experiments/find-levels.js --seed 1 --restarts 10 --steps 400 --top 10 --verbose 1
+```
+
+The filters and score weights are guesses to be tuned by playing the results.
+Large state spaces are the main cost: stack-heavy boards can exceed the search's
+state cap, and those levels are discarded.
 
 ## Ideas not yet decided
 

@@ -1,12 +1,8 @@
-// Browser test bench for the lava-and-blocks rules. The rules themselves
-// (parseLevel, formatLevel, move, isWon, DIRECTIONS, OBJECTIVES) live in
-// engine.js, and the preset levels (PRESET_LEVELS) in levels.js, both loaded
-// before this file. This file is just the UI built on top of them.
-const SVG_NS = "http://www.w3.org/2000/svg";
-const CELL = 48;
-const RIM = 24; // Width of the infinite-lava rim drawn around the board.
-const MIN_CELL_PX = 28; // Below this the board scrolls instead of shrinking.
-const CROWN_POINTS = "-12,8 -12,-6 -6,0 0,-9 6,0 12,-6 12,8";
+// Browser test bench for the lava-and-blocks rules: type in any level, change
+// the objective, try things out. The rules themselves (parseLevel, formatLevel,
+// move, isWon, DIRECTIONS, OBJECTIVES) live in engine.js, the preset levels
+// (PRESET_LEVELS) in levels.js, and the board drawing (drawBoard, CELL, RIM) in
+// render.js, all loaded before this file. The player-facing game is play.js.
 
 const KEY_DIRECTIONS = {
   ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
@@ -181,7 +177,7 @@ function handleBoardClick(event) {
 }
 
 function render() {
-  renderBoard();
+  drawBoard(elements.board, state.current);
   renderStatus();
   elements.undo.disabled = state.history.length === 0;
   try {
@@ -206,67 +202,5 @@ function renderStatus() {
     const prefix = `Moves: ${moves}.`;
     elements.status.textContent = state.message ? `${prefix} ${state.message}` : prefix;
     if (state.messageKind === "died") elements.status.classList.add("is-died");
-  }
-}
-
-function svgElement(name, attributes, parent) {
-  const element = document.createElementNS(SVG_NS, name);
-  for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
-  parent.append(element);
-  return element;
-}
-
-function renderBoard() {
-  const s = state.current;
-  const width = s.cols * CELL + 2 * RIM;
-  const height = s.rows * CELL + 2 * RIM;
-  const svg = elements.board;
-  svg.replaceChildren();
-  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  svg.setAttribute("aria-label", `Game board, ${s.rows} rows by ${s.cols} columns`);
-  svg.style.maxWidth = `${width}px`;
-  svg.style.minWidth = `${Math.min(width, s.cols * MIN_CELL_PX + 2 * RIM)}px`;
-
-  svgElement("rect", { class: "rim", x: 0, y: 0, width, height }, svg);
-  for (let y = 0; y < s.rows; y += 1) {
-    for (let x = 0; x < s.cols; x += 1) {
-      renderCell(svg, s, y * s.cols + x, RIM + x * CELL, RIM + y * CELL);
-    }
-  }
-}
-
-function renderCell(svg, s, index, left, top) {
-  const centerX = left + CELL / 2;
-  const centerY = top + CELL / 2;
-  const value = s.cells[index];
-  const isGoal = s.goals[index] === 1;
-  const box = { x: left, y: top, width: CELL, height: CELL };
-
-  if (s.walls[index]) {
-    svgElement("rect", { class: "cell-wall", ...box }, svg);
-    return;
-  }
-  if (value < 0) {
-    svgElement("rect", { class: "cell-lava", ...box }, svg);
-    svgElement("text", { class: "cell-number on-lava", x: centerX, y: centerY }, svg).textContent = String(-value);
-  } else {
-    svgElement("rect", { class: isGoal ? "cell-floor is-goal" : "cell-floor", ...box }, svg);
-    if (value > 0) {
-      const inset = 7;
-      svgElement("rect", { class: "stack", x: left + inset, y: top + inset, width: CELL - 2 * inset, height: CELL - 2 * inset, rx: 5 }, svg);
-      svgElement("text", { class: "cell-number on-stack", x: centerX, y: centerY }, svg).textContent = String(value);
-    }
-  }
-  if (index === s.player) {
-    svgElement("circle", { class: "player", cx: centerX, cy: centerY, r: 15 }, svg);
-  }
-  // The crown goes last so it shows on top of lava, stacks and the player. With
-  // a number in the middle it shrinks and moves up to sit above it.
-  if (isGoal) {
-    const hasNumber = value !== 0;
-    const transform = hasNumber
-      ? `translate(${centerX} ${centerY - 14}) scale(0.55)`
-      : `translate(${centerX} ${centerY}) scale(1)`;
-    svgElement("polygon", { class: "crown", points: CROWN_POINTS, transform }, svg);
   }
 }
