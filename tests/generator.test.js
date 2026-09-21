@@ -72,3 +72,34 @@ test("reverse-built levels have interior lava and stacks, and a mix of border wa
   assert.ok(withLava > 80 && withStacks > 80, `lava ${withLava}, stacks ${withStacks}`);
   assert.ok(borderWalls > 50, `only ${borderWalls} levels had a border wall`);
 });
+
+test("with no disposal steps, blocks and lava depth balance exactly (surplus 0)", () => {
+  const rng = mulberry32(8);
+  let built = 0;
+  for (let attempt = 0; attempt < 300 && built < 80; attempt += 1) {
+    const result = buildByReversal(rng, { objective: "all", disposalChance: 0 });
+    if (!result) continue;
+    built += 1;
+    let blocks = 0;
+    let lava = 0;
+    for (const v of result.level.cells) { if (v > 0) blocks += v; else lava -= v; }
+    assert.equal(blocks - lava, 0, "surplus must be 0 when nothing is thrown away");
+    const { state } = replay(result);
+    assert.equal(isWon(state, "all"), true);
+  }
+  assert.ok(built >= 60);
+});
+
+test("transport steps carry blocks without leaving lava, and the sequence still wins", () => {
+  const rng = mulberry32(9);
+  let built = 0;
+  let withTransport = 0;
+  for (let attempt = 0; attempt < 300 && built < 80; attempt += 1) {
+    const result = buildByReversal(rng, { objective: "all", transportChance: 0.7, minPushes: 6, maxPushes: 9 });
+    if (!result) continue;
+    built += 1;
+    if (result.stepKinds.includes("transport")) withTransport += 1;
+    assert.equal(isWon(replay(result).state, "all"), true);
+  }
+  assert.ok(withTransport > 40, `only ${withTransport} levels used a transport step`);
+});

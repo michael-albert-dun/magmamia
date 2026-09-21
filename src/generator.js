@@ -9,6 +9,15 @@
 // balance. The result isn't necessarily *optimally* solved by the sequence it
 // was built with: the solver still finds the true fewest pushes.
 //
+// Two kinds of reverse step, and the mix matters for how a level plays. An
+// "uncover" step lands its blocks on cells that are floor or lava, so the reverse
+// leaves lava behind (the forward push filled it): each such stack ends up next to
+// its own strip of lava and is simply shoved at it, with no manoeuvring. A
+// "transport" step lands its blocks only on existing stacks, so it leaves no lava:
+// forwards, it carries blocks from one place to another, and something has to be
+// done with them afterwards. Levels with transport steps need blocks carried round
+// walls and set up before they can fill anything.
+//
 // Blocks lost into infinite lava are the one place blocks are created from
 // nothing: a reverse push may have blocks fly into an infinite lava cell, which
 // means the finished level has surplus blocks that have to be thrown away. A
@@ -28,7 +37,11 @@ const DIRECTION_NAMES = Object.keys(DIRECTIONS);
 // border cell is wall rather than infinite lava, default 0.12), interiorWalls
 // (max walls inside, default 3), minPushes / maxPushes (how many reverse pushes,
 // default 5 to 10), objective ("reach" places a goal where the finished board's
-// player region is; "lava" and "all" have none), maxLavaDepth (4), maxStackHeight (5).
+// player region is; "lava" and "all" have none), maxLavaDepth (4), maxStackHeight (5),
+// transportChance (chance a step is a transport step when one is possible, default
+// 0), disposalChance (chance a step that could throw blocks into infinite lava is
+// allowed to, default 1; lower it for levels with less surplus to tidy up).
+// Also returns stepKinds, "uncover" or "transport" for each step in reverse order.
 // Returns null if it couldn't build a level (callers just try again).
 function buildByReversal(rng, options = {}) {
   const size = options.size ?? 6;
@@ -40,6 +53,8 @@ function buildByReversal(rng, options = {}) {
   const objective = options.objective ?? "reach";
   const maxLava = options.maxLavaDepth ?? 4;
   const maxStack = options.maxStackHeight ?? 5;
+  const transportChance = options.transportChance ?? 0;
+  const disposalChance = options.disposalChance ?? 1;
 
   const randInt = (lo, hi) => lo + Math.floor(rng() * (hi - lo + 1));
   const n = grid * grid;
@@ -85,17 +100,10 @@ function buildByReversal(rng, options = {}) {
     return [...seen];
   };
 
-  const target = randInt(minPushes, maxPushes);
-  const sequence = []; // Built backwards, so pushes are added to the front.
-  let lastStackCell = -1;
-  for (let done = 0, attempts = 0; done < target && attempts < 200; attempts += 1) {
-    const region = regionFrom(player);
-    const q = region[Math.floor(rng() * region.length)];
-    const name = DIRECTION_NAMES[Math.floor(rng() * DIRECTION_NAMES.length)];
+  // Work out one reverse step: the stack at q pushed in direction `name` with
+  // `height` blocks. Returns null if it isn't allowed, else what it would change.
+  const proposeStep = (q, name, height) => {
     const { dx, dy } = DIRECTIONS[name];
-
-    // The cells the stack would topple over: interior cells until a wall or the
-    // infinite lava at the border ends the line.
     const line = [];
     let x = (q % grid) + dx;
     let y = Math.floor(q / grid) + dy;
@@ -110,28 +118,58 @@ function buildByReversal(rng, options = {}) {
       y += dy;
     }
     // A stack right against a wall can't be pushed at all.
-    if (line.length === 0 && end !== "abyss") continue;
-
-    const height = randInt(1, maxStack);
+    if (line.length === 0 && end !== "abyss") return null;
     const m = line.length;
+    if (height > m && end === "none") return null; // The line was cut short by the height cap.
     // How many blocks each line cell received going forwards.
     const received = line.map(() => 0);
     for (let k = 0; k < Math.min(height, m); k += 1) received[k] += 1;
     if (height > m && end === "wall") received[m - 1] += height - m; // The pile against the wall.
     // (Blocks past the end of an abyss-ended line are simply lost.)
-    if (height > m && end === "none") continue; // The line was cut short by the height cap.
-
+    const throwsAway = end === "abyss" && height > m - 0;
     const behind = q - (dy * grid + dx);
-    const bx = behind % grid;
-    const by = Math.floor(behind / grid);
-    if (bx < 0 || by < 0 || bx >= grid || by >= grid || !walkable(behind)) continue;
-    if (line.some((i, k) => received[k] > 0 && cells[i] - received[k] < -maxLava)) continue;
+    if (behind < 0 || behind >= n || !walkable(behind)) return null;
+    if (line.some((i, k) => received[k] > 0 && cells[i] - received[k] < -maxLava)) return null;
+    const createsLava = line.some((i, k) => received[k] > 0 && cells[i] - received[k] < 0);
+    return { name, line, received, behind, q, height, throwsAway, createsLava, movesBlocks: received.some((r) => r > 0) };
+  };
 
-    line.forEach((i, k) => { cells[i] -= received[k]; });
-    cells[q] = height;
-    sequence.unshift({ from: behind, dir: name });
-    if (lastStackCell < 0) lastStackCell = q;
-    player = behind;
+  const target = randInt(minPushes, maxPushes);
+  const sequence = []; // Built backwards, so pushes are added to the front.
+  const stepKinds = [];
+  let lastStackCell = -1;
+  for (let done = 0, attempts = 0; done < target && attempts < 300; attempts += 1) {
+    const region = regionFrom(player);
+    let step = null;
+    if (rng() < transportChance) {
+      // Every transport step available from here, then one of them at random.
+      const options = [];
+      for (const q of region) {
+        for (const name of DIRECTION_NAMES) {
+          for (let height = 1; height <= maxStack; height += 1) {
+            const candidate = proposeStep(q, name, height);
+            if (candidate && candidate.movesBlocks && !candidate.createsLava && !candidate.throwsAway) options.push(candidate);
+          }
+        }
+      }
+      if (options.length > 0) step = options[Math.floor(rng() * options.length)];
+    }
+    let kind = "transport";
+    if (!step) {
+      kind = "uncover";
+      const q = region[Math.floor(rng() * region.length)];
+      const name = DIRECTION_NAMES[Math.floor(rng() * DIRECTION_NAMES.length)];
+      step = proposeStep(q, name, randInt(1, maxStack));
+      if (!step) continue;
+      if (step.throwsAway && rng() >= disposalChance) continue;
+    }
+
+    step.line.forEach((i, k) => { cells[i] -= step.received[k]; });
+    cells[step.q] = step.height;
+    sequence.unshift({ from: step.behind, dir: step.name });
+    stepKinds.push(kind);
+    if (lastStackCell < 0) lastStackCell = step.q;
+    player = step.behind;
     done += 1;
   }
   if (sequence.length < minPushes) return null;
@@ -147,7 +185,7 @@ function buildByReversal(rng, options = {}) {
     if (region.length === 0) return null;
     goals[region[Math.floor(rng() * region.length)]] = 1;
   }
-  return { level: { rows: grid, cols: grid, cells, walls, abyss, goals, player }, sequence, lastStackCell };
+  return { level: { rows: grid, cols: grid, cells, walls, abyss, goals, player }, sequence, lastStackCell, stepKinds };
 }
 
 if (typeof module !== "undefined" && module.exports) {

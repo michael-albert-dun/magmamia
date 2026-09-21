@@ -9,10 +9,18 @@
 // --max-pushes (default 12), --reverse-min / --reverse-max (reverse pushes applied,
 // default 4 to 7), --ring-wall-chance (default 0.25, so border walls are common),
 // --keep-decoration N (inert pieces left in as red herrings, default 1),
+// --transport-chance P (chance a reverse step carries blocks without leaving lava
+// behind, default 0.4), --disposal-chance P (chance a step may throw blocks into
+// infinite lava, default 0.12), --min-surplus / --max-surplus (how many blocks beyond
+// the lava depth must be thrown away: default 1 to 2, from playtesting, where the
+// tight levels were the interesting ones), --min-lava-depth (default 8: lots of
+// lava), --min-coupling (default 0, off), --obstruct N (after building, try to add up
+// to N walls across the intended route, keeping each that leaves the level solvable
+// and lengthens the shortest solution; default 2),
 // --json FILE (rewritten as candidates are found), --objective all|lava (default all).
 const fs = require("fs");
-const { formatLevel } = require("../src/engine.js");
-const { analyse, solutionEvents } = require("../src/solver.js");
+const { formatLevel, move } = require("../src/engine.js");
+const { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks } = require("../src/solver.js");
 const { buildByReversal } = require("../src/generator.js");
 
 const args = {};
@@ -22,6 +30,11 @@ const MAX_MINUTES = Number(args["max-minutes"] ?? 8);
 const MIN_PUSHES = Number(args["min-pushes"] ?? 5);
 const MAX_PUSHES = Number(args["max-pushes"] ?? 12);
 const OBJECTIVE = args.objective ?? "all";
+const MIN_SURPLUS = Number(args["min-surplus"] ?? 1);
+const MAX_SURPLUS = Number(args["max-surplus"] ?? 2);
+const MIN_LAVA_DEPTH = Number(args["min-lava-depth"] ?? 8);
+const MIN_COUPLING = Number(args["min-coupling"] ?? 0);
+const OBSTRUCT = Number(args.obstruct ?? 2);
 const KEEP_DECORATION = Number(args["keep-decoration"] ?? 1); // Inert pieces left in as red herrings.
 const CAP = 150000;
 const CAP_PIECE = 60000;
@@ -72,6 +85,45 @@ function pruneDecoration(level, pushes, keep) {
   }
 }
 
+// Add walls across the intended route, keeping each that leaves the level solvable
+// and makes the shortest solution longer: the blocks then have to be carried round
+// the wall instead of shoved straight at their lava. Only interior floor cells the
+// solution touches are candidates, and the wall that lengthens it most is kept.
+function obstruct(level, first, tries) {
+  let current = level;
+  let base = first;
+  let added = 0;
+  for (let t = 0; t < tries; t += 1) {
+    const touched = new Set();
+    let state = current;
+    for (const { from, dir } of base.path) {
+      const outcome = move({ ...state, player: from }, dir);
+      touched.add(from);
+      touched.add(outcome.state.player);
+      for (const landing of outcome.drops) if (landing >= 0) touched.add(landing);
+      state = outcome.state;
+    }
+    const candidates = [...touched].filter((i) => !isRing(current, i) && current.cells[i] === 0 && !current.walls[i] && !current.abyss[i] && i !== current.player);
+    for (let k = candidates.length - 1; k > 0; k -= 1) {
+      const j = Math.floor(rng() * (k + 1));
+      [candidates[k], candidates[j]] = [candidates[j], candidates[k]];
+    }
+    let best = null;
+    for (const i of candidates.slice(0, 10)) {
+      const walled = { ...current, walls: current.walls.slice() };
+      walled.walls[i] = 1;
+      const r = analyse(walled, { full: false, maxStates: CAP, objective: OBJECTIVE });
+      if (r.truncated || !r.solvable || r.pushes <= base.pushes) continue;
+      if (!best || r.pushes > best.r.pushes) best = { level: walled, r };
+    }
+    if (!best) break;
+    current = best.level;
+    base = best.r;
+    added += 1;
+  }
+  return { level: current, first: base, added };
+}
+
 const started = Date.now();
 const found = [];
 let tried = 0;
@@ -80,21 +132,35 @@ while ((Date.now() - started) / 60000 < MAX_MINUTES) {
     objective: OBJECTIVE,
     minPushes: Number(args["reverse-min"] ?? 4),
     maxPushes: Number(args["reverse-max"] ?? 7),
-    ringWallChance: Number(args["ring-wall-chance"] ?? 0.25)
+    ringWallChance: Number(args["ring-wall-chance"] ?? 0.85),
+    transportChance: Number(args["transport-chance"] ?? 0.4),
+    disposalChance: Number(args["disposal-chance"] ?? 0.12)
   });
   if (!built) continue;
   tried += 1;
-  const first = analyse(built.level, { full: false, maxStates: CAP, objective: OBJECTIVE });
-  if (first.truncated || !first.solvable || first.pushes < MIN_PUSHES || first.pushes > MAX_PUSHES) continue;
-  const { level, removed, remaining } = pruneDecoration(built.level, first.pushes, KEEP_DECORATION);
+  // The surplus is fixed by the board: blocks beyond the lava depth must be thrown away.
+  let blocks = 0;
+  let lavaDepth = 0;
+  for (const v of built.level.cells) { if (v > 0) blocks += v; else lavaDepth -= v; }
+  const surplus = blocks - lavaDepth;
+  if (surplus < MIN_SURPLUS || surplus > MAX_SURPLUS || lavaDepth < MIN_LAVA_DEPTH) continue;
+  const built1 = analyse(built.level, { full: false, maxStates: CAP, objective: OBJECTIVE });
+  if (built1.truncated || !built1.solvable) continue;
+  const obstructed = OBSTRUCT > 0 ? obstruct(built.level, built1, OBSTRUCT) : { level: built.level, first: built1, added: 0 };
+  const first = obstructed.first;
+  if (first.pushes < MIN_PUSHES || first.pushes > MAX_PUSHES) continue;
+  const { level, removed, remaining } = pruneDecoration(obstructed.level, first.pushes, KEEP_DECORATION);
+  if (trivialDisposalStacks(level).length > 0) continue;
   const r = analyse(level, { full: false, maxStates: CAP, objective: OBJECTIVE });
+  const coupling = solutionCoupling(level, r.path);
+  if (coupling.coupling < MIN_COUPLING) continue;
   const events = [...solutionEvents(level, r.path)].sort();
   const walls = level.walls.reduce((n, w, i) => n + (w && isRing(level, i) ? 1 : 0), 0);
   const stacks = [...level.cells].filter((v) => v > 0).length;
   const lava = [...level.cells].filter((v) => v < 0).length;
   const text = formatLevel(level);
   if (found.some((f) => f.text === text)) continue;
-  found.push({ text, pushes: r.pushes, events, states: r.states, borderWalls: walls, stacks, lava, prunedPieces: removed, redHerrings: remaining, seed: SEED });
+  found.push({ text, pushes: r.pushes, events, states: r.states, borderWalls: walls, stacks, lava, prunedPieces: removed, redHerrings: remaining, surplus, lavaDepth, coupling: coupling.coupling, addedWalls: obstructed.added, seed: SEED });
   if (args.json) fs.writeFileSync(args.json, JSON.stringify(found, null, 2));
 }
 console.log(`seed ${SEED}: tried ${tried} reverse-built levels in ${((Date.now() - started) / 60000).toFixed(1)} min, ${found.length} passed`);
