@@ -1,6 +1,6 @@
 // The player-facing game: a level picker, the board, undo and restart. The
 // rules (move, previewPushes, isWon, ...) are in engine.js, the levels
-// (CURATED_LEVELS, or DANCEFLOOR_CANDIDATES) in levels.js and the board drawing
+// (CURATED_LEVELS, or one of the dancefloor sets) in levels.js and the board drawing
 // (drawBoard, CELL) in render.js, all loaded before this file. bench.html is the
 // developer's test bench, this is the game.
 const KEY_DIRECTIONS = {
@@ -30,20 +30,25 @@ const OBJECTIVE_HELP = {
   all: "Clear the dancefloor! Get rid of every bit of lava and every block. A block can only be removed by pushing it into infinite lava."
 };
 
-// Which list of levels to play: the game's own, or (with ?set=dancefloor) the
-// "Clear the dancefloor" candidates being tried out. A candidate set keeps its own
-// saved progress.
+// Which list of levels to play: the game's own, or one of the "Clear the dancefloor"
+// candidate sets being tried out (?set=dancefloor for the latest round, ?set=dancefloor1
+// for round 1). Each set keeps its own saved progress.
+const LEVEL_SETS = {
+  dancefloor: { levels: DANCEFLOOR_CANDIDATES, key: "magmamia.solved.dancefloor2.v1", title: "dancefloor candidates" },
+  dancefloor1: { levels: DANCEFLOOR_ROUND_1, key: "magmamia.solved.dancefloor.v1", title: "dancefloor candidates, round 1" }
+};
+
 function requestedSet() {
   try {
-    return new URLSearchParams(window.location.search).get("set");
+    return LEVEL_SETS[new URLSearchParams(window.location.search).get("set")] || null;
   } catch {
     return null;
   }
 }
-const CANDIDATE_SET = requestedSet() === "dancefloor";
-const LEVELS = CANDIDATE_SET ? DANCEFLOOR_CANDIDATES : CURATED_LEVELS;
+const CANDIDATE_SET = requestedSet();
+const LEVELS = CANDIDATE_SET ? CANDIDATE_SET.levels : CURATED_LEVELS;
 
-const SOLVED_KEY = CANDIDATE_SET ? "magmamia.solved.dancefloor.v1" : "magmamia.solved.v1";
+const SOLVED_KEY = CANDIDATE_SET ? CANDIDATE_SET.key : "magmamia.solved.v1";
 const GENTLE_KEY = "magmamia.gentle.v1";
 const PREVIEW_KEY = "magmamia.preview.v1";
 
@@ -75,7 +80,7 @@ const elements = {
   title: document.querySelector("#game-title")
 };
 
-if (CANDIDATE_SET) elements.title.textContent = "Magma Mia! \u2014 dancefloor candidates";
+if (CANDIDATE_SET) elements.title.textContent = `Magma Mia! \u2014 ${CANDIDATE_SET.title}`;
 loadPreferences();
 elements.gentle.checked = state.gentle;
 elements.preview.checked = state.preview;

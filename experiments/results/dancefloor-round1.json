@@ -191,5 +191,18 @@
     "lava": 4,
     "closed": true,
     "keys": "up left left down down left down up up up up up down down down left left"
+  },
+  {
+    "text": "########\n#...@..#\n~...C..#\n#...a..#\n#..#a#.#\n########",
+    "pushes": 8,
+    "moves": 24,
+    "states": 1105,
+    "events": [
+      "edge",
+      "shuffle",
+      "stack"
+    ],
+    "note": "hand-built from Michael's overfill-pocket idea",
+    "keys": "right down left left up left left down right right down left down left up right up up right right down left left left"
   }
 ]

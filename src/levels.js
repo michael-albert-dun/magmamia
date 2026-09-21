@@ -290,10 +290,12 @@ const CURATED_LEVELS = [
   }
 ];
 
-// "Clear the dancefloor" candidates for Michael to try at index.html?set=dancefloor
-// and judge. Built by running the game backwards (src/generator.js); his reasons
-// for why one works or doesn't become the filters for the next round.
-const DANCEFLOOR_CANDIDATES = [
+// "Clear the dancefloor" candidates for Michael to try and judge; his reasons for why
+// one works or doesn't become the filters for the next round. Round 1 was built by
+// plain reverse construction and is at index.html?set=dancefloor1. What he found:
+// most were too loose, with many spare blocks (the tight, lava-heavy ones were the
+// interesting ones), some stacks were obvious chores, and few needed any manoeuvring.
+const DANCEFLOOR_ROUND_1 = [
   {
     // Round 1, #1: as generated, then the 5-block pile in the corner was removed (Michael:
     // "a fine introduction with the 5 block pile omitted"). 4 pushes, 3 stacks.
@@ -462,9 +464,224 @@ const DANCEFLOOR_CANDIDATES = [
       "#..B#..#",
       "~~~~~~~~"
     ].join("\n")
+  },
+  {
+    // Hand-built from Michael's idea: the 3 pushed straight down overfills the walled-in
+    // lower lava cell, and a block stranded there can never be cleared. Hand-built: overfill pocket.
+    objective: "all",
+    text: [
+      "########",
+      "#...@..#",
+      "~...C..#",
+      "#...a..#",
+      "#..#a#.#",
+      "########"
+    ].join("\n")
+  }
+];
+
+// Round 2, at index.html?set=dancefloor: built with those findings applied (a spare
+// block or two at most, lots of lava, steps that carry blocks without clearing lava,
+// walls across the intended route, mostly wall around the edge).
+const DANCEFLOOR_CANDIDATES = [
+  {
+    // Round 2, #1: 6 pushes, surplus 2 blocks, lava depth 11, 6 stacks, one red herring.
+    objective: "all",
+    text: [
+      "###~####",
+      "~..Daaa~",
+      "~..A#A.#",
+      "#daE.a.#",
+      "#....@.#",
+      "#....A.#",
+      "#..aaA.#",
+      "####~###"
+    ].join("\n")
+  },
+  {
+    // Round 2, #2: 6 pushes, surplus 2 blocks, lava depth 14, 5 stacks, one red herring.
+    objective: "all",
+    text: [
+      "########",
+      "#...Cba~",
+      "#..A@a.~",
+      "~...Ea.#",
+      "#...aC.#",
+      "##..a..#",
+      "#..Ddab#",
+      "######~#"
+    ].join("\n")
+  },
+  {
+    // Round 2, #3: 6 pushes, surplus 1 block, lava depth 9, 5 stacks.
+    objective: "all",
+    text: [
+      "########",
+      "~aB....~",
+      "#......#",
+      "#caC...#",
+      "#dC.A..~",
+      "#.A....~",
+      "#.@....#",
+      "###~####"
+    ].join("\n")
+  },
+  {
+    // Round 2, #4: 7 pushes, surplus 1 block, lava depth 17, 7 stacks, one red herring.
+    objective: "all",
+    text: [
+      "######~#",
+      "~.....a#",
+      "#..@Cac#",
+      "~.EAC.a#",
+      "#bbAa.D#",
+      "##aAa..#",
+      "~.c.a..#",
+      "########"
+    ].join("\n")
+  },
+  {
+    // Round 2, #5: 8 pushes, surplus 1 block, lava depth 16, 7 stacks, one red herring.
+    objective: "all",
+    text: [
+      "~#######",
+      "#@B.Aaa~",
+      "#ACDaab#",
+      "~Ba....#",
+      "#dbD...#",
+      "#aa....~",
+      "#a.....#",
+      "########"
+    ].join("\n")
+  },
+  {
+    // Round 2, #6: 8 pushes, surplus 2 blocks, lava depth 16, 5 stacks, 1 wall added across the route.
+    objective: "all",
+    text: [
+      "~##~~###",
+      "~@.....~",
+      "#E#A.D.#",
+      "#aDaabb#",
+      "#a...a.#",
+      "~b.D.a.~",
+      "#b...a.~",
+      "########"
+    ].join("\n")
+  },
+  {
+    // Round 2, #7: 9 pushes, surplus 1 block, lava depth 13, 5 stacks, 1 wall added across the route.
+    objective: "all",
+    text: [
+      "##~#####",
+      "#.Aa...#",
+      "#......#",
+      "#A....##",
+      "#.#D...#",
+      "#a.@Caa~",
+      "#d.Eaac#",
+      "########"
+    ].join("\n")
+  },
+  {
+    // Round 2, #8: 10 pushes, surplus 2 blocks, lava depth 10, 5 stacks, 2 walls added across the route.
+    objective: "all",
+    text: [
+      "####~#~#",
+      "#c.....#",
+      "#a.A.Bc#",
+      "~D.@...#",
+      "#..D#..#",
+      "#..aaA##",
+      "#..a...~",
+      "###~#~#~"
+    ].join("\n")
+  },
+  {
+    // Round 2, #9: 10 pushes, surplus 2 blocks, lava depth 11, 4 stacks, 1 wall added across the route, one red herring.
+    objective: "all",
+    text: [
+      "#~#~####",
+      "~..a.#b#",
+      "#....Da#",
+      "#daD.AC#",
+      "#...#.@#",
+      "#.....##",
+      "#......#",
+      "########"
+    ].join("\n")
+  },
+  {
+    // Round 2, #10: 11 pushes, surplus 1 block, lava depth 13, 5 stacks, 2 walls added across the route.
+    objective: "all",
+    text: [
+      "~~##~~~#",
+      "#.....a#",
+      "##AC.#a#",
+      "#.Ab..a#",
+      "#..#..a#",
+      "#..a.DE~",
+      "#..b.d@#",
+      "####~#~#"
+    ].join("\n")
+  },
+  {
+    // Round 2, #11: 12 pushes, surplus 1 block, lava depth 8, 5 stacks, 1 wall added across the route, one red herring.
+    objective: "all",
+    text: [
+      "~##~####",
+      "##.....#",
+      "#caaB.a#",
+      "#a.#@A.#",
+      "#a..#..#",
+      "#.DA#A.#",
+      "#......~",
+      "~~~##~##"
+    ].join("\n")
+  },
+  {
+    // Round 2, #12: 12 pushes, surplus 1 block, lava depth 9, 5 stacks, 2 walls added across the route, one red herring.
+    objective: "all",
+    text: [
+      "##~#~~~#",
+      "#..#.a.~",
+      "#..B..#~",
+      "#..a#A.#",
+      "#..a.A.#",
+      "#..aDB.#",
+      "#..ad@.#",
+      "#####~~#"
+    ].join("\n")
+  },
+  {
+    // Round 2, #13: 13 pushes, surplus 1 block, lava depth 8, 4 stacks, 2 walls added across the route, one red herring.
+    objective: "all",
+    text: [
+      "~~####~#",
+      "#...aa##",
+      "##AAa..#",
+      "~a.B@.##",
+      "#......#",
+      "#...#..#",
+      "~aaaaE.#",
+      "######~#"
+    ].join("\n")
+  },
+  {
+    // Round 2, #14: 14 pushes, surplus 2 blocks, lava depth 9, 7 stacks, 2 walls added across the route.
+    objective: "all",
+    text: [
+      "########",
+      "#...BBb~",
+      "#@.AA..~",
+      "#Ba.Aab#",
+      "#aa.#..#",
+      "#aB....#",
+      "#.##...#",
+      "##~#####"
+    ].join("\n")
   }
 ];
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_CANDIDATES };
+  module.exports = { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_ROUND_1, DANCEFLOOR_CANDIDATES };
 }

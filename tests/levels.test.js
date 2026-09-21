@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { parseLevel, hasClosedBorder } = require("../src/engine.js");
-const { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_CANDIDATES } = require("../src/levels.js");
+const { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_ROUND_1, DANCEFLOOR_CANDIDATES } = require("../src/levels.js");
 const { analyse } = require("../src/solver.js");
 const { solve } = require("./solve.js");
 
@@ -37,14 +37,17 @@ CURATED_LEVELS.forEach((level, index) => {
 
 // The dancefloor candidates being tried out: each must be a real "Clear the
 // dancefloor" level (closed border, solvable) so a bad one never wastes a playtest.
-DANCEFLOOR_CANDIDATES.forEach((level, index) => {
-  test(`dancefloor candidate ${index + 1} is closed, marked "all", and solvable`, () => {
-    const start = parseLevel(level.text);
-    assert.equal(level.objective, "all");
-    assert.equal(hasClosedBorder(start), true);
-    const result = analyse(start, { objective: "all", maxStates: 400000, full: false });
-    assert.equal(result.truncated, false);
-    assert.equal(result.solvable, true);
-    assert.ok(result.pushes >= 1);
+const DANCEFLOOR_SETS = { "round 1": DANCEFLOOR_ROUND_1, "latest round": DANCEFLOOR_CANDIDATES };
+for (const [name, levels] of Object.entries(DANCEFLOOR_SETS)) {
+  levels.forEach((level, index) => {
+    test(`dancefloor candidate ${index + 1} (${name}) is closed, marked "all", and solvable`, () => {
+      const start = parseLevel(level.text);
+      assert.equal(level.objective, "all");
+      assert.equal(hasClosedBorder(start), true);
+      const result = analyse(start, { objective: "all", maxStates: 400000, full: false });
+      assert.equal(result.truncated, false);
+      assert.equal(result.solvable, true);
+      assert.ok(result.pushes >= 1);
+    });
   });
-});
+}
