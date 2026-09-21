@@ -1,14 +1,19 @@
-// Exact solver and level analysis for the "reach a goal" objective -- no DOM.
-// Used by experiments (finding interesting levels) and tests; see README.md.
+// Exact solver and level analysis -- no DOM. Used by experiments (finding
+// interesting levels) and tests; see README.md.
 //
 // The search is over pushes, not steps. Between pushes the player can walk
 // anywhere in the connected region of floor cells they stand in, so a state
 // is the board plus which region the player is in (represented by the region's
-// lowest cell index). A win is a region that contains a goal cell.
+// lowest cell index). Which states win depends on the objective (see
+// OBJECTIVES in engine.js): "reach" (the default) wins when the region contains
+// a goal cell; "lava" when no finite lava is left; "all" when every lava cell
+// and block is gone. Infinite lava never counts, and can't be cleared.
 
-const solverEngine = typeof module !== "undefined" && module.exports ? require("./engine.js") : { move, DIRECTIONS };
+const solverEngine = typeof module !== "undefined" && module.exports ? require("./engine.js") : { move, DIRECTIONS, isWon };
 
 const SOLVER_DIRS = Object.keys(solverEngine.DIRECTIONS);
+const NEAR_OPTIMAL_PUSHES = 2;
+const MAX_ENUMERATED_PATHS = 50000;
 
 // Flood-fill the floor cells the player can walk to. Stacks, lava, infinite lava
 // and walls all stop the player (walking into a stack is a push, not a walk).
@@ -59,6 +64,13 @@ function blocksIn(state) {
 //   pushes          fewest pushes to reach a goal
 //   optimalCount    how many distinct push sequences achieve that (walking
 //                   between pushes doesn't make sequences distinct)
+//   optimalEndStates / nearEndStates / winningStates   how many different
+//                   winning positions the optimal solutions can end in, how many
+//                   are reachable within NEAR_OPTIMAL_PUSHES extra pushes, and
+//                   how many exist in all. 1 means the finished position is
+//                   forced: only the route to it is left to work out. The
+//                   all-positions count is inflated by spare blocks, which can
+//                   sit almost anywhere; the near-optimal count is much less so.
 //   slack           most blocks that can be left over in any winning state; 0
 //                   means every solution uses up every block ("tight")
 //   states          how many states were explored
@@ -71,9 +83,22 @@ function blocksIn(state) {
 //                   dir while standing on cell `from`
 // options.full (default true) explores everything; false stops as soon as the
 // first winning depth is finished, which is enough for pushes/solvable.
+// options.objective is "reach" (default), "lava" or "all".
+// options.detail (with full exploration) adds, at some cost:
+//   essentialSolutions   how many optimal solutions differ by more than the order
+//                   of their pushes: each push is described by the stack's cell,
+//                   direction and height, so reordering independent pushes gives
+//                   the same set. Counted over at most MAX_ENUMERATED_PATHS
+//                   optimal sequences; essentialCapped says if it stopped early
+//                   (the count is then a lower bound).
+//   criticalStates   positions on an optimal path with at least three legal
+//                   pushes of which exactly one keeps the level solvable: the
+//                   places where the puzzle "becomes tight".
+//   maxDeadAlternatives   the most fatal pushes at any such position.
 function analyse(start, options = {}) {
   const maxStates = options.maxStates ?? 100000;
   const full = options.full !== false;
+  const objective = options.objective ?? "reach";
   const nodes = [];
   const index = new Map();
 
@@ -88,7 +113,8 @@ function analyse(start, options = {}) {
       return known;
     }
     index.set(key, nodes.length);
-    nodes.push({ state: canonical, region, won: reachesGoal, depth, ways, parent, via, children: [], blocks: blocksIn(canonical) });
+    const won = objective === "reach" ? reachesGoal : solverEngine.isWon(canonical, objective);
+    nodes.push({ state: canonical, region, won, depth, ways, parent, via, children: [], edges: [], blocks: blocksIn(canonical) });
     return nodes.length - 1;
   }
 
@@ -116,6 +142,7 @@ function analyse(start, options = {}) {
         }
         const child = addNode(outcome.state, head, { from: c, dir: name }, node.depth + 1, node.ways);
         node.children.push(child);
+        node.edges.push({ child, cell: ny * node.state.cols + nx, dir: name, height: node.state.cells[ny * node.state.cols + nx] });
         if (nodes[child].won && nodes[child].depth < winDepth) winDepth = nodes[child].depth;
       }
       if (truncated) break;
@@ -127,10 +154,16 @@ function analyse(start, options = {}) {
   if (!result.solvable) return result;
 
   let best = -1;
+  result.optimalEndStates = 0;
+  result.nearEndStates = 0;
+  result.winningStates = 0;
   for (let i = 0; i < nodes.length; i += 1) {
     if (!nodes[i].won) continue;
+    result.winningStates += 1;
+    if (nodes[i].depth <= winDepth + NEAR_OPTIMAL_PUSHES) result.nearEndStates += 1;
     if (nodes[i].depth === winDepth) {
       result.optimalCount += nodes[i].ways;
+      result.optimalEndStates += 1;
       if (best < 0) best = i;
     }
     if (nodes[i].blocks > result.slack) result.slack = nodes[i].blocks;
@@ -162,31 +195,101 @@ function analyse(start, options = {}) {
     result.deadFraction = 1 - live.reduce((a, b) => a + b, 0) / nodes.length;
     result.firstPushes = nodes[0].children.length;
     result.livePushes = nodes[0].children.filter((child) => live[child]).length;
+
+    if (options.detail) {
+      // Nodes on some optimal path: those with an optimal-length route to a win.
+      // The node list is in breadth-first order, so going backwards handles
+      // deeper nodes first.
+      const good = new Uint8Array(nodes.length);
+      for (let i = nodes.length - 1; i >= 0; i -= 1) {
+        const node = nodes[i];
+        if (node.won) {
+          if (node.depth === winDepth) good[i] = 1;
+          continue;
+        }
+        for (const edge of node.edges) {
+          if (nodes[edge.child].depth === node.depth + 1 && good[edge.child]) {
+            good[i] = 1;
+            break;
+          }
+        }
+      }
+      result.criticalStates = 0;
+      result.maxDeadAlternatives = 0;
+      nodes.forEach((node, i) => {
+        if (!good[i] || node.won) return;
+        const liveEdges = node.edges.filter((edge) => live[edge.child]).length;
+        if (node.edges.length >= 3 && liveEdges === 1) result.criticalStates += 1;
+        if (liveEdges >= 1) result.maxDeadAlternatives = Math.max(result.maxDeadAlternatives, node.edges.length - liveEdges);
+      });
+
+      // Optimal solutions as sets of pushes, so reordering doesn't count.
+      const distinct = new Set();
+      const described = [];
+      let enumerated = 0;
+      const visit = (i) => {
+        if (enumerated >= MAX_ENUMERATED_PATHS) return;
+        const node = nodes[i];
+        if (node.won) {
+          enumerated += 1;
+          distinct.add([...described].sort().join("|"));
+          return;
+        }
+        for (const edge of node.edges) {
+          if (nodes[edge.child].depth !== node.depth + 1 || !good[edge.child]) continue;
+          described.push(`${edge.cell},${edge.dir},${edge.height}`);
+          visit(edge.child);
+          described.pop();
+        }
+      };
+      visit(0);
+      result.essentialSolutions = distinct.size;
+      result.essentialCapped = enumerated >= MAX_ENUMERATED_PATHS;
+    }
   }
   return result;
 }
 
 // Replay a solution path (from analyse) and report which unusual things happen
 // in it: "cover" (a block lands on the goal, covering it), "pile" (blocks pile
-// up against a wall), "stack" (a block lands on an existing stack) and "edge"
-// (blocks are lost off the board). Filling lava is the ordinary case and isn't
-// listed.
+// up against a wall), "stack" (a block lands on an existing stack), "edge"
+// (blocks are lost into infinite lava), "hop" (a stack topples over a lava cell
+// it only shallows, carrying a block across to the far side, where it can be
+// pushed on from a new direction) and "shuffle" (two adjacent singles are
+// merged into a 2-stack, which is then pushed so it lays two singles again:
+// repeating that moves a pair of blocks along, one position at a time). Filling
+// lava is the ordinary case and isn't listed.
 function solutionEvents(start, path) {
   const events = new Set();
+  const pairs = new Set(); // Cells holding a 2-stack made by merging two singles.
   let state = start;
   for (const { from, dir } of path) {
     const outcome = solverEngine.move({ ...state, player: from }, dir);
     const landed = new Set();
+    let crossedUnfilled = false; // A landing so far was on lava that stays lava.
     for (const landing of outcome.drops) {
       if (landing < 0 || (state.abyss && state.abyss[landing])) {
         events.add("edge");
+        crossedUnfilled = true;
         continue;
       }
       if (landed.has(landing)) events.add("pile");
       landed.add(landing);
       if (state.cells[landing] > 0) events.add("stack");
       if (state.goals[landing] && outcome.state.cells[landing] > 0) events.add("cover");
+      if (state.cells[landing] < 0 && outcome.state.cells[landing] < 0) crossedUnfilled = true;
+      else if (crossedUnfilled && state.cells[landing] >= 0) events.add("hop");
     }
+    // A merged pair pushed on so that both its blocks land on empty floor.
+    const pushedCell = outcome.state.player;
+    if (outcome.height === 2 && pairs.has(pushedCell) && outcome.drops.length === 2 &&
+        outcome.drops.every((landing) => landing >= 0 && !(state.abyss && state.abyss[landing]) && state.cells[landing] === 0)) {
+      events.add("shuffle");
+    }
+    for (const landing of outcome.drops) {
+      if (landing >= 0 && state.cells[landing] === 1 && outcome.state.cells[landing] === 2) pairs.add(landing);
+    }
+    for (const cell of [...pairs]) if (outcome.state.cells[cell] !== 2) pairs.delete(cell);
     state = outcome.state;
   }
   return events;
