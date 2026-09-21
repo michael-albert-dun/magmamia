@@ -120,6 +120,11 @@ before they can win by standing there. This is deliberate: a covered goal is an
 easy thing to overlook, and the goal's floor colour stays visible around the
 stack.
 
+**Dancefloor levels: mostly wall.** A design principle from playtesting: most of the
+boundary of a "Clear the dancefloor" level should be wall, with only a few infinite
+lava cells as outlets. Part of the difficulty is then tidying up any extra blocks,
+because there are few places to throw them.
+
 The game does not detect dead ends. A level can become unsolvable without
 warning, and the player has to notice and undo or restart.
 
@@ -187,6 +192,17 @@ Possible rules for winning:
 - Potentially also variant goals, e.g., potions that allow you to stand on 
   a piece of lava (either just once, or converting it to floor)
 
+**Waterlogged blocks.** A refinement of the potion idea above. A waterlogged block
+has two properties:
+
+- When it lands on lava, the lava solidifies, however deep it is (but not infinite
+  lava, which can't be cleared).
+- When it touches other blocks, they become waterlogged too.
+- Stacks of blocks are either all waterlogged or not.
+- Touch means "lands on top of" (so a toppled waterlogged stack that adds one block to a dry stack makes it waterlogged)
+- Waterlogged blocks are still used up when solidifying lava.
+
+
 How "reached" interacts with goals that get covered by blocks or that are on lava
 would also need deciding: for the "all of them" rules, does a goal have to be
 occupied at the same time as the others, or is visiting each one enough?
@@ -246,8 +262,10 @@ on an existing stack, or losing blocks off the edge.
 ring (8 by 8 in all) whose cells are each infinite lava or wall, and hill-climbs
 on a score built from those measurements, keeping levels that meet the filters: at
 least 6 pushes, slack of at most 2 ("tightish"), at most 3 optimal solutions,
-no decorative pieces (a stack, lava cell or wall whose removal doesn't change the
-fewest pushes; a border wall counts too, replaced by infinite lava), and at least one unusual event. Run it with, for example:
+no decorative pieces beyond an allowance (`--max-decoration`, default none; a
+few are welcome as red herrings) (a stack, lava cell or wall whose removal doesn't change the
+fewest pushes; the border never counts, since it is required and wall versus
+infinite lava doesn't matter where it changes nothing), and at least one unusual event. Run it with, for example:
 
 ```sh
 node experiments/find-levels.js --seed 1 --restarts 10 --steps 400 --top 10 --verbose 1
