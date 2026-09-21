@@ -120,10 +120,28 @@ before they can win by standing there. This is deliberate: a covered goal is an
 easy thing to overlook, and the goal's floor colour stays visible around the
 stack.
 
-**Dancefloor levels: mostly wall.** A design principle from playtesting: most of the
-boundary of a "Clear the dancefloor" level should be wall, with only a few infinite
-lava cells as outlets. Part of the difficulty is then tidying up any extra blocks,
-because there are few places to throw them.
+**What playtesting has found about Clear the dancefloor levels** (Michael's verdicts
+on two rounds of candidates; the tight, lava-heavy ones were the interesting ones):
+
+- **Few spare blocks.** The number of blocks that must be thrown away is fixed by the
+  board: all the blocks minus all the finite lava depth. One or two spare is good;
+  four or more makes a level loose and easy to muddle through. (In round 1 the
+  favourite had a surplus of 1 and 18 points of lava depth; the ones called too slack
+  or too easy had 4 to 5.)
+- **Lots of lava.**
+- **Mostly wall around the edge**, with only a few infinite lava cells as outlets.
+  Part of the difficulty is then tidying up any extra blocks.
+- **Necessary moves that don't clear lava.** Building a level by only "uncovering"
+  lava gives stacks that are simply shoved at their own strip. Reverse steps that
+  carry blocks without leaving lava behind, and walls added across the intended
+  route, make blocks have to be manoeuvred round obstacles first.
+- **No obvious chores**, such as a stack whose only possible push throws it into
+  infinite lava.
+- **An idea to build:** an "overfill pocket". Two depth-1 lava cells in a column with
+  the lower one walled in on the other three sides, and a 3-stack above: pushing the
+  3 straight down overfills the pocket and strands a block there for good, so the
+  stack has to be split and only two of its blocks brought back. A hand-built version
+  is the last puzzle of round 1.
 
 The game does not detect dead ends. A level can become unsolvable without
 warning, and the player has to notice and undo or restart.
@@ -223,6 +241,10 @@ http://127.0.0.1:4176/
 
 The app is plain HTML, CSS, and JavaScript. There is no build step, and it fetches
 no data files, so opening `index.html` directly also works.
+
+To try the "Clear the dancefloor" candidates being playtested, add `?set=dancefloor` to
+the address (the latest round) or `?set=dancefloor1` (round 1). Each set keeps its own
+saved progress.
 
 `index.html` is the game: a short set of curated "reach the crown" levels, a level
 picker (solved levels are remembered in the browser), undo, restart, and a
