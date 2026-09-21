@@ -195,6 +195,97 @@ const CURATED_LEVELS = [
       "~......~",
       "~~~~~~~~"
     ].join("\n")
+  },
+  {
+    // seed 101 (ring search 2026-09-21, rank #8): 9 pushes, 1 optimal solution, slack 1; 85% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~...a..~",
+      "~......~",
+      "~..@...~",
+      "~.Dd.c#~",
+      "~...c.*.~",
+      "~b...a.~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 101 (ring search 2026-09-21, rank #4): 13 pushes, 1 optimal solution, slack 1; 91% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~..cd..~",
+      "~...A..~",
+      "~ab*....~",
+      "~.a.#.a~",
+      "~..#.C@~",
+      "~......~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 106 (ring search 2026-09-21, rank #7): 10 pushes, 1 optimal solution, slack 0; 93% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~.....a~",
+      "~a...B.~",
+      "~A#b...#",
+      "~..#.a.~",
+      "~..a..b*~",
+      "~@.a...~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 106 (ring search 2026-09-21, rank #5): 10 pushes, 1 optimal solution, slack 0; 97% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~...c.a*~",
+      "~......~",
+      "~...aCc#",
+      "~....AB~",
+      "~..#.b.~",
+      "~...c.@~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 101 (ring search 2026-09-21, rank #2): 12 pushes, 1 optimal solution, slack 0; 98% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~b*#....~",
+      "~b...A.~",
+      "~.B.#A.~",
+      "~..b...~",
+      "~.b....~",
+      "~.@....~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 106 (ring search 2026-09-21, rank #1): 15 pushes, 2 optimal solutions, slack 0; 98% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~a.a.b.~",
+      "~.C....~",
+      "~.Aa.ac*~",
+      "~B...a.~",
+      "~@#a...~",
+      "~a.....~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 101 (ring search 2026-09-21, rank #3): 17 pushes, 1 optimal solution, slack 1; 99% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~@.....~",
+      "~#....b~",
+      "~.Bcac.~",
+      "~....Da~",
+      "~..b...~",
+      "~..b..a*~",
+      "~~~~~~~~"
+    ].join("\n")
   }
 ];
 
