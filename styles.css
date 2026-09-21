@@ -9,14 +9,14 @@
   /* Board palette. Lava is dark red and stacks are light sandy beige, so they
      differ strongly in lightness (not just hue) and stay distinguishable for
      colour-blind players. They also differ in shape: lava fills its cell,
-     stacks sit inset on floor. The goal floor is teal, kept well away from
-     the beige of the stacks that can cover it. */
-  --floor: #b4b6ba;
-  --floor-edge: #9c9ea3;
+     stacks sit inset on floor. The floor is a very pale blue-grey and the goal
+     floor is teal, kept well away from the beige of the stacks that can cover it. */
+  --floor: #dbe5ef;
+  --floor-edge: #c1cfdd;
   --goal-floor: #8fcac4;
   --lava: #b3261e;
   --lava-edge: #8a1c16;
-  --stack: #e8cf94;
+  --stack: #e2c47f;
   --stack-edge: #a5803c;
   --wall: #3b3f45;
   --player: #2b5fb4;

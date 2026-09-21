@@ -28,9 +28,9 @@ const MAX_LEVEL_HEIGHT = 26; // The text format has one letter per height/depth.
 
 // The kinds of objective a level can have (see README, "Objective").
 const OBJECTIVES = {
-  reach: "Reach a goal",
-  lava: "Clear all the lava",
-  all: "Clear all the lava and blocks"
+  reach: "Seize the crown (reach the goal)",
+  lava: "Clear the lava",
+  all: "Clear the dancefloor (all lava and blocks)"
 };
 
 // Level text: one line per row, one character per cell (`~` is infinite lava),

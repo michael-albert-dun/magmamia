@@ -60,7 +60,8 @@ const PRESET_LEVELS = [
 // The levels in the player-facing game. All are "reach the goal" levels, each
 // checked by tests/levels.test.js. The first three are short hand-made intros; the
 // rest were found by experiments/find-levels.js (seed and measurements noted;
-// the full results are in experiments/results/).
+// the full results are in experiments/results/). An entry may set `objective`
+// ("reach" by default, or "lava" or "all"); crown levels need a goal cell.
 const CURATED_LEVELS = [
   { text: PRESET_LEVELS[0].text },
   {

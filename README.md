@@ -79,7 +79,7 @@ floor, and the last two would reach the wall, so they pile onto that same stack.
 
 ## Graphics
 
-- **Floor**: greyish.
+- **Floor**: a very pale blue-grey.
 - **Goal**: a crown icon drawn on top of whatever is in the cell (floor, lava or
   a stack). A goal cell's floor is a different colour (currently teal, well away
   from the beige of the stacks), chosen so it stays clearly visible around a stack
@@ -104,11 +104,16 @@ floor, and the last two would reach the wall, so they pile onto that same stack.
 
 ## Objective
 
-Levels can have different kinds of goal, chosen per level:
+Levels can have different kinds of goal, chosen per level (`objective` in the
+level list, "reach" if not given). The game's how-to-play text follows the level's
+objective.
 
-- Reach a particular cell (probably the first kind to build).
-- Clear all the lava.
-- Clear all the lava and all the blocks.
+- **Seize the crown**: reach a particular cell. All the game's levels so far.
+- **Clear the lava**: no finite lava left; blocks left over don't matter.
+- **Clear the dancefloor**: no lava and no blocks left. A block can only be removed
+  by pushing it into infinite lava, so the border matters: a border wall takes away
+  a place to dispose of blocks, and a walled-in corner can strand a block that can
+  never be cleared.
 
 Blocks can land on the goal cell. The player then has to push them off again
 before they can win by standing there. This is deliberate: a covered goal is an

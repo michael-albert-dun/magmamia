@@ -22,6 +22,14 @@ const REFUSAL_TEXT = {
   abyss: "That's infinite lava, so the move was refused."
 };
 
+// What the how-to-play says first, by objective. A level's objective is
+// `objective` in its CURATED_LEVELS entry ("reach" if it has none).
+const OBJECTIVE_HELP = {
+  reach: "Seize the crown! Reach it to win the level.",
+  lava: "Fill in all the lava. Blocks left over don't matter.",
+  all: "Clear the dancefloor! Get rid of every bit of lava and every block. A block can only be removed by pushing it into infinite lava."
+};
+
 const SOLVED_KEY = "magmamia.solved.v1";
 const GENTLE_KEY = "magmamia.gentle.v1";
 const PREVIEW_KEY = "magmamia.preview.v1";
@@ -49,7 +57,8 @@ const elements = {
   undo: document.querySelector("#undo-button"),
   restart: document.querySelector("#restart-button"),
   next: document.querySelector("#next-button"),
-  dpadButtons: [...document.querySelectorAll(".dpad button")]
+  dpadButtons: [...document.querySelectorAll(".dpad button")],
+  objectiveHelp: document.querySelector("#objective-help")
 };
 
 loadPreferences();
@@ -123,8 +132,12 @@ function setMessage(text, kind) {
   state.messageKind = kind;
 }
 
+function objectiveOf(levelIndex) {
+  return CURATED_LEVELS[levelIndex].objective || "reach";
+}
+
 function isSolved() {
-  return isWon(state.current, "reach");
+  return isWon(state.current, objectiveOf(state.levelIndex));
 }
 
 function attemptMove(directionName) {
@@ -195,6 +208,7 @@ function handleBoardClick(event) {
 }
 
 function render() {
+  elements.objectiveHelp.textContent = OBJECTIVE_HELP[objectiveOf(state.levelIndex)];
   // Tags for where a push from here would drop blocks (see previewPushes).
   const chips = state.preview && !isSolved() ? previewPushes(state.current).flatMap((push) => push.landings) : [];
   drawBoard(elements.board, state.current, { chips });
