@@ -87,13 +87,15 @@ const CURATED_LEVELS = [
   },
   {
     // seed 6: 11 pushes, 2 optimal solutions, slack 1; 90% of positions are dead ends.
+    // (The search's version had a depth-2 lava cell in the bottom-left corner;
+    // it changed nothing about the puzzle, so it is floor here.)
     text: [
       "......",
       "...#.c*",
       "..@D..",
       "...#..",
       "..#..A",
-      "b#...."
+      ".#...."
     ].join("\n")
   },
   {

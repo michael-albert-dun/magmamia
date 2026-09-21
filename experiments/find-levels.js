@@ -20,7 +20,10 @@ const MIN_PUSHES = Number(args["min-pushes"] ?? 6);
 const MAX_SLACK = Number(args["max-slack"] ?? 2);
 const MAX_SOLUTIONS = Number(args["max-solutions"] ?? 3);
 const MAX_STATES = 20000;
-const MAX_STATES_PIECE = 10000;
+// The piece-removal check must be allowed at least as many states as the level
+// itself has: if it runs out of room it can't tell that an inert piece changed
+// nothing, and would wrongly count it as mattering.
+const MAX_STATES_PIECE = MAX_STATES;
 // Levels with fewer pushes than this get only a cheap score, no full analysis.
 const FULL_ANALYSIS_FROM = 4;
 const MAX_LAVA_DEPTH = 4;
