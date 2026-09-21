@@ -290,6 +290,181 @@ const CURATED_LEVELS = [
   }
 ];
 
+// "Clear the dancefloor" candidates for Michael to try at index.html?set=dancefloor
+// and judge. Built by running the game backwards (src/generator.js); his reasons
+// for why one works or doesn't become the filters for the next round.
+const DANCEFLOOR_CANDIDATES = [
+  {
+    // Round 1, #1: as generated, then the 5-block pile in the corner was removed (Michael:
+    // "a fine introduction with the 5 block pile omitted"). 4 pushes, 3 stacks.
+    objective: "all",
+    text: [
+      "~~#~~~~~",
+      "~.Da.aa#",
+      "~@.....~",
+      "#C.....#",
+      "#a.....~",
+      "~a..#B.~",
+      "~a...a.~",
+      "~~~~~~##"
+    ].join("\n")
+  },
+  {
+    // Round 1, #2: 5 pushes, 5 stacks, 7 lava cells, 6 border walls, one red herring.
+    objective: "all",
+    text: [
+      "~~~~~~#~",
+      "#...Dba~",
+      "~....aa#",
+      "~....Ca#",
+      "~A....a#",
+      "~.....C#",
+      "~...@Ba~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // Round 1, #3: 6 pushes, 5 stacks, 4 lava cells, 11 border walls, one red herring.
+    objective: "all",
+    text: [
+      "#~~~~~~#",
+      "#.....b#",
+      "#......~",
+      "~.#.AAC~",
+      "#...Ba.~",
+      "#...a.@~",
+      "~...b.C#",
+      "~~#~#~~#"
+    ].join("\n")
+  },
+  {
+    // Round 1, #4: 5 pushes, 5 stacks, 7 lava cells, 8 border walls, one red herring.
+    objective: "all",
+    text: [
+      "#~#~##~~",
+      "~.aaB@.~",
+      "~.A.E..~",
+      "~.a.b..~",
+      "~...b..#",
+      "~...A.D~",
+      "#...a.a#",
+      "~~~~~#~~"
+    ].join("\n")
+  },
+  {
+    // Round 1, #5: 6 pushes, 6 stacks, 16 lava cells, 9 border walls, one red herring.
+    objective: "all",
+    text: [
+      "~~~#~~##",
+      "~a...@a~",
+      "~a...Ea~",
+      "#aaA.aa#",
+      "~baB.aC~",
+      "#D...a.#",
+      "#baaaD.~",
+      "~#~~~~~~"
+    ].join("\n")
+  },
+  {
+    // Round 1, #6: 5 pushes, 5 stacks, 6 lava cells, 6 border walls, one red herring.
+    objective: "all",
+    text: [
+      "~~~~~~~~",
+      "#....#.~",
+      "~....Da~",
+      "~......~",
+      "~B.C.@D~",
+      "~a.a...~",
+      "#a.caB.~",
+      "~#~#~~##"
+    ].join("\n")
+  },
+  {
+    // Round 1, #7: 6 pushes, 6 stacks, 9 lava cells, 10 border walls, one red herring.
+    objective: "all",
+    text: [
+      "#~###~#~",
+      "~.b..a.#",
+      "#.B..Da~",
+      "~..Aa.a~",
+      "~aaaD.B#",
+      "~......#",
+      "#...@Aa~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // Round 1, #8: 6 pushes, 6 stacks, 10 lava cells, 9 border walls, one red herring.
+    objective: "all",
+    text: [
+      "~~~~~~~~",
+      "#@.Caaa#",
+      "~B..#..~",
+      "#a...Ea~",
+      "~aDBaa.#",
+      "#Ba....~",
+      "~.c....#",
+      "~~#~#~#~"
+    ].join("\n")
+  },
+  {
+    // Round 1, #9: 6 pushes, 6 stacks, 7 lava cells, 5 border walls, one red herring.
+    objective: "all",
+    text: [
+      "~~~~#~~~",
+      "~a.....~",
+      "#a.....#",
+      "~DaaB..~",
+      "~@.E.a.~",
+      "~.abBA.#",
+      "~..A...~",
+      "~~#~~~~~"
+    ].join("\n")
+  },
+  {
+    // Round 1, #10: 6 pushes, 5 stacks, 8 lava cells, 8 border walls, one red herring.
+    objective: "all",
+    text: [
+      "#~~~#~#~",
+      "~aaaE@.~",
+      "~.....A~",
+      "#..Ea.a~",
+      "~....a.~",
+      "#..A..D~",
+      "#..a..a#",
+      "~~~~#~~~"
+    ].join("\n")
+  },
+  {
+    // Round 1, #11: 6 pushes, 5 stacks, 6 lava cells, 7 border walls, one red herring.
+    objective: "all",
+    text: [
+      "~#~~~#~~",
+      "#.C.a.C~",
+      "#...a..~",
+      "~...E.#~",
+      "~...@A.~",
+      "~.Eaaab#",
+      "#......~",
+      "~#~~~~~~"
+    ].join("\n")
+  },
+  {
+    // Round 1, #12: 6 pushes, 6 stacks, 4 lava cells, 7 border walls, one red herring.
+    objective: "all",
+    text: [
+      "~#~~~#~~",
+      "#..D..a~",
+      "#.....a~",
+      "~.aaB.C~",
+      "~CD...@~",
+      "~......#",
+      "#..B#..#",
+      "~~~~~~~~"
+    ].join("\n")
+  }
+];
+
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { PRESET_LEVELS, CURATED_LEVELS };
+  module.exports = { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_CANDIDATES };
 }

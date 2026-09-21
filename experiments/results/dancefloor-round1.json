@@ -1,0 +1,195 @@
+[
+  {
+    "text": "~~#~~~~~\n~.Da.aa#\n~@.....~\n#C.....#\n#a.....~\n~a..#B.~\n~a...a.~\n~~~~~~##",
+    "pushes": 4,
+    "moves": 20,
+    "states": 32,
+    "events": [
+      "edge"
+    ],
+    "redHerrings": 0,
+    "borderWalls": 7,
+    "stacks": 3,
+    "lava": 7,
+    "closed": true,
+    "keys": "down down right right right right down up up up left left left left up right down right right up",
+    "note": "the 5-block pile in the corner was removed after playtesting feedback"
+  },
+  {
+    "text": "~~~~~~#~\n#...Dba~\n~....aa#\n~....Ca#\n~A....a#\n~.....C#\n~...@Ba~\n~~~~~~~~",
+    "pushes": 5,
+    "moves": 19,
+    "states": 303,
+    "events": [
+      "edge"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 6,
+    "stacks": 5,
+    "lava": 7,
+    "closed": true,
+    "keys": "right right up up left left left left left right right right right up up left left up right"
+  },
+  {
+    "text": "#~~~~~~#\n#.....b#\n#......~\n~.#.AAC~\n#...Ba.~\n#...a.@~\n~...b.C#\n~~#~#~~#",
+    "pushes": 6,
+    "moves": 11,
+    "states": 1008,
+    "events": [
+      "edge",
+      "pile",
+      "stack"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 11,
+    "stacks": 5,
+    "lava": 4,
+    "closed": true,
+    "keys": "down up up up up left down up left down down"
+  },
+  {
+    "text": "#~#~##~~\n~.aaB@.~\n~.A.E..~\n~.a.b..~\n~...b..#\n~...A.D~\n#...a.a#\n~~~~~#~~",
+    "pushes": 5,
+    "moves": 18,
+    "states": 1686,
+    "events": [
+      "edge",
+      "hop",
+      "stack"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 8,
+    "stacks": 5,
+    "lava": 7,
+    "closed": true,
+    "keys": "left down right down down right down down left left up up up up up left left down"
+  },
+  {
+    "text": "~~~#~~##\n~a...@a~\n~a...Ea~\n#aaA.aa#\n~baB.aC~\n#D...a.#\n#baaaD.~\n~#~~~~~~",
+    "pushes": 6,
+    "moves": 24,
+    "states": 2174,
+    "events": [
+      "edge",
+      "pile",
+      "stack"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 9,
+    "stacks": 6,
+    "lava": 16,
+    "closed": true,
+    "keys": "down down left left right down down right right up left left left down right right right down left left left left left up"
+  },
+  {
+    "text": "~~~~~~~~\n#....#.~\n~....Da~\n~......~\n~B.C.@D~\n~a.a...~\n#a.caB.~\n~#~#~~##",
+    "pushes": 5,
+    "moves": 26,
+    "states": 3053,
+    "events": [
+      "edge",
+      "pile"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 6,
+    "stacks": 5,
+    "lava": 6,
+    "closed": true,
+    "keys": "right up left left left down down right right right down left up up up left left left left down up up right right right right"
+  },
+  {
+    "text": "#~###~#~\n~.b..a.#\n#.B..Da~\n~..Aa.a~\n~aaaD.B#\n~......#\n#...@Aa~\n~~~~~~~~",
+    "pushes": 6,
+    "moves": 22,
+    "states": 3879,
+    "events": [
+      "edge",
+      "pile"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 10,
+    "stacks": 6,
+    "lava": 9,
+    "closed": true,
+    "keys": "right up right up left left left left up up down down right right right up up left left left down right"
+  },
+  {
+    "text": "~~~~~~~~\n#@.Caaa#\n~B..#..~\n#a...Ea~\n~aDBaa.#\n#Ba....~\n~.c....#\n~~#~#~#~",
+    "pushes": 6,
+    "moves": 20,
+    "states": 4786,
+    "events": [
+      "edge",
+      "pile"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 9,
+    "stacks": 6,
+    "lava": 10,
+    "closed": true,
+    "keys": "right right down left left right down right right right left left left down right down down left left up"
+  },
+  {
+    "text": "~~~~#~~~\n~a.....~\n#a.....#\n~DaaB..~\n~@.E.a.~\n~.abBA.#\n~..A...~\n~~#~~~~~",
+    "pushes": 6,
+    "moves": 22,
+    "states": 6838,
+    "events": [
+      "edge",
+      "stack"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 5,
+    "stacks": 6,
+    "lava": 7,
+    "closed": true,
+    "keys": "up up right right right right down right down down down left up left up right up left left down down down"
+  },
+  {
+    "text": "#~~~#~#~\n~aaaE@.~\n~.....A~\n#..Ea.a~\n~....a.~\n#..A..D~\n#..a..a#\n~~~~#~~~",
+    "pushes": 6,
+    "moves": 28,
+    "states": 9811,
+    "events": [
+      "edge"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 8,
+    "stacks": 5,
+    "lava": 8,
+    "closed": true,
+    "keys": "left down right right left left left left down down right down up left up right up right right right down down down up up up left down"
+  },
+  {
+    "text": "~#~~~#~~\n#.C.a.C~\n#...a..~\n~...E.#~\n~...@A.~\n~.Eaaab#\n#......~\n~#~~~~~~",
+    "pushes": 6,
+    "moves": 22,
+    "states": 15034,
+    "events": [
+      "edge",
+      "pile"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 7,
+    "stacks": 5,
+    "lava": 6,
+    "closed": true,
+    "keys": "up up right right up down left left left left up down down down left down right up right right right right"
+  },
+  {
+    "text": "~#~~~#~~\n#..D..a~\n#.....a~\n~.aaB.C~\n~CD...@~\n~......#\n#..B#..#\n~~~~~~~~",
+    "pushes": 6,
+    "moves": 17,
+    "states": 44043,
+    "events": [
+      "edge",
+      "stack"
+    ],
+    "redHerrings": 1,
+    "borderWalls": 7,
+    "stacks": 6,
+    "lava": 4,
+    "closed": true,
+    "keys": "up left left down down left down up up up up up down down down left left"
+  }
+]

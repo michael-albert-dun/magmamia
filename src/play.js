@@ -1,8 +1,8 @@
 // The player-facing game: a level picker, the board, undo and restart. The
 // rules (move, previewPushes, isWon, ...) are in engine.js, the levels
-// (CURATED_LEVELS) in levels.js and the board drawing (drawBoard, CELL) in
-// render.js, all loaded before this file. bench.html is the developer's test
-// bench, this is the game.
+// (CURATED_LEVELS, or DANCEFLOOR_CANDIDATES) in levels.js and the board drawing
+// (drawBoard, CELL) in render.js, all loaded before this file. bench.html is the
+// developer's test bench, this is the game.
 const KEY_DIRECTIONS = {
   ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
   w: "up", s: "down", a: "left", d: "right",
@@ -30,7 +30,20 @@ const OBJECTIVE_HELP = {
   all: "Clear the dancefloor! Get rid of every bit of lava and every block. A block can only be removed by pushing it into infinite lava."
 };
 
-const SOLVED_KEY = "magmamia.solved.v1";
+// Which list of levels to play: the game's own, or (with ?set=dancefloor) the
+// "Clear the dancefloor" candidates being tried out. A candidate set keeps its own
+// saved progress.
+function requestedSet() {
+  try {
+    return new URLSearchParams(window.location.search).get("set");
+  } catch {
+    return null;
+  }
+}
+const CANDIDATE_SET = requestedSet() === "dancefloor";
+const LEVELS = CANDIDATE_SET ? DANCEFLOOR_CANDIDATES : CURATED_LEVELS;
+
+const SOLVED_KEY = CANDIDATE_SET ? "magmamia.solved.dancefloor.v1" : "magmamia.solved.v1";
 const GENTLE_KEY = "magmamia.gentle.v1";
 const PREVIEW_KEY = "magmamia.preview.v1";
 
@@ -58,9 +71,11 @@ const elements = {
   restart: document.querySelector("#restart-button"),
   next: document.querySelector("#next-button"),
   dpadButtons: [...document.querySelectorAll(".dpad button")],
-  objectiveHelp: document.querySelector("#objective-help")
+  objectiveHelp: document.querySelector("#objective-help"),
+  title: document.querySelector("#game-title")
 };
 
+if (CANDIDATE_SET) elements.title.textContent = "Magma Mia! \u2014 dancefloor candidates";
 loadPreferences();
 elements.gentle.checked = state.gentle;
 elements.preview.checked = state.preview;
@@ -86,7 +101,7 @@ document.addEventListener("keydown", handleKeyDown);
 startLevel(firstUnsolvedLevel());
 
 function firstUnsolvedLevel() {
-  const index = CURATED_LEVELS.findIndex((_, i) => !state.solved.has(i));
+  const index = LEVELS.findIndex((_, i) => !state.solved.has(i));
   return index >= 0 ? index : 0;
 }
 
@@ -118,9 +133,9 @@ function toggleInfo() {
 }
 
 function startLevel(index) {
-  if (index < 0 || index >= CURATED_LEVELS.length) return;
+  if (index < 0 || index >= LEVELS.length) return;
   state.levelIndex = index;
-  state.initial = parseLevel(CURATED_LEVELS[index].text);
+  state.initial = parseLevel(LEVELS[index].text);
   state.current = state.initial;
   state.history = [];
   setMessage("", "");
@@ -133,7 +148,7 @@ function setMessage(text, kind) {
 }
 
 function objectiveOf(levelIndex) {
-  return CURATED_LEVELS[levelIndex].objective || "reach";
+  return LEVELS[levelIndex].objective || "reach";
 }
 
 function isSolved() {
@@ -215,12 +230,12 @@ function render() {
   renderLevelNav();
   renderStatus();
   elements.undo.disabled = state.history.length === 0;
-  elements.next.hidden = !(isSolved() && state.levelIndex + 1 < CURATED_LEVELS.length);
+  elements.next.hidden = !(isSolved() && state.levelIndex + 1 < LEVELS.length);
 }
 
 function renderLevelNav() {
   elements.levelNav.replaceChildren();
-  CURATED_LEVELS.forEach((_, index) => {
+  LEVELS.forEach((_, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = String(index + 1);
@@ -238,7 +253,7 @@ function renderStatus() {
   const moves = state.history.length;
   elements.status.className = "status";
   if (isSolved()) {
-    const last = state.levelIndex + 1 >= CURATED_LEVELS.length;
+    const last = state.levelIndex + 1 >= LEVELS.length;
     elements.status.textContent = `Solved in ${moves} ${moves === 1 ? "move" : "moves"}.${last ? " That's the last level for now." : ""}`;
     elements.status.classList.add("is-won");
   } else {

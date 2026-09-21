@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { parseLevel, hasClosedBorder } = require("../src/engine.js");
-const { PRESET_LEVELS, CURATED_LEVELS } = require("../src/levels.js");
+const { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_CANDIDATES } = require("../src/levels.js");
 const { analyse } = require("../src/solver.js");
 const { solve } = require("./solve.js");
 
@@ -29,6 +29,20 @@ CURATED_LEVELS.forEach((level, index) => {
 
   test(`curated level ${index + 1} is solvable and needs pushing`, () => {
     const result = analyse(parseLevel(level.text), { maxStates: 200000 });
+    assert.equal(result.truncated, false);
+    assert.equal(result.solvable, true);
+    assert.ok(result.pushes >= 1);
+  });
+});
+
+// The dancefloor candidates being tried out: each must be a real "Clear the
+// dancefloor" level (closed border, solvable) so a bad one never wastes a playtest.
+DANCEFLOOR_CANDIDATES.forEach((level, index) => {
+  test(`dancefloor candidate ${index + 1} is closed, marked "all", and solvable`, () => {
+    const start = parseLevel(level.text);
+    assert.equal(level.objective, "all");
+    assert.equal(hasClosedBorder(start), true);
+    const result = analyse(start, { objective: "all", maxStates: 400000, full: false });
     assert.equal(result.truncated, false);
     assert.equal(result.solvable, true);
     assert.ok(result.pushes >= 1);
