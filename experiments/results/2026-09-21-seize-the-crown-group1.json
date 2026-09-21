@@ -1,0 +1,112 @@
+{
+  "run": {
+    "date": "2026-09-21",
+    "command": "node experiments/find-levels.js --seed <401,402 plain; 411,412 with --require-event hop> --restarts 1000 --steps 500 --top 40 --max-minutes 60 --slack off --min-end-positions 2 --max-dead 0.9",
+    "note": "Slack ignored; at least 2 winning positions within 2 pushes of the shortest; at most 90% dead-end positions. 5 levels kept from about 500 restarts; all became levels 20 to 24."
+  },
+  "levels": [
+    {
+      "gameLevel": 20,
+      "text": "~~~~~~~~\n~..bA..~\n~dEa*..b~\n~b...#.~\n~..ba..~\n~@..C..~\n~.a....~\n~~~~~~~~",
+      "run": "g1-plain-401",
+      "seed": 401,
+      "pushes": 11,
+      "sequences": 1,
+      "essential": 1,
+      "nearEndPositions": 22,
+      "deadEndShare": 0.34450159877658837,
+      "criticalStates": 3,
+      "coupling": 0.55,
+      "slack": 2,
+      "states": 7193,
+      "events": [
+        "edge",
+        "hop",
+        "stack"
+      ],
+      "closed": true
+    },
+    {
+      "gameLevel": 21,
+      "text": "~~~~~~~~\n~...a.a~\n~..a.bA~\n~...c.a~\n~..D.B.~\n~.....a~\n~@a..aa*~\n~~~~~~~~",
+      "run": "g1-plain-402",
+      "seed": 402,
+      "pushes": 9,
+      "sequences": 1,
+      "essential": 1,
+      "nearEndPositions": 9,
+      "deadEndShare": 0.5427780852241284,
+      "criticalStates": 3,
+      "coupling": 0.56,
+      "slack": 3,
+      "states": 9035,
+      "events": [
+        "edge",
+        "stack"
+      ],
+      "closed": true
+    },
+    {
+      "gameLevel": 22,
+      "text": "~~~~~~~~\n~#.....~\n~.#.b..~\n~.aDCc.~\n~...A.#~\n~......~\n~..@.ca*~\n~~~~~~~~",
+      "run": "g1-hop-411",
+      "seed": 411,
+      "pushes": 11,
+      "sequences": 1,
+      "essential": 1,
+      "nearEndPositions": 28,
+      "deadEndShare": 0.5535062319023039,
+      "criticalStates": 1,
+      "coupling": 0.64,
+      "slack": 2,
+      "states": 15886,
+      "events": [
+        "edge",
+        "hop",
+        "stack"
+      ],
+      "closed": true
+    },
+    {
+      "gameLevel": 23,
+      "text": "~~~~~~~~\n~.*c....~\n~ab.@..~\n~a..b..~\n~...c..~\n~....Ba~\n~.C.a..~\n~~~~~~~~",
+      "run": "g1-plain-402",
+      "seed": 402,
+      "pushes": 17,
+      "sequences": 2,
+      "essential": 2,
+      "nearEndPositions": 10,
+      "deadEndShare": 0.7357782269708346,
+      "criticalStates": 1,
+      "coupling": 0.88,
+      "slack": 2,
+      "states": 6926,
+      "events": [
+        "shuffle",
+        "stack"
+      ],
+      "closed": true
+    },
+    {
+      "gameLevel": 24,
+      "text": "~~~~~~~~\n~a...a*.~\n~.bb@..~\n~..aBac~\n~.C....~\n~#Aa...~\n~....#.~\n~~~~~~~~",
+      "run": "g1-plain-402",
+      "seed": 402,
+      "pushes": 10,
+      "sequences": 2,
+      "essential": 2,
+      "nearEndPositions": 2,
+      "deadEndShare": 0.7955390334572491,
+      "criticalStates": 2,
+      "coupling": 1,
+      "slack": 1,
+      "states": 269,
+      "events": [
+        "edge",
+        "hop",
+        "stack"
+      ],
+      "closed": true
+    }
+  ]
+}

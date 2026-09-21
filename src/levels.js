@@ -287,6 +287,71 @@ const CURATED_LEVELS = [
       "~..b..a*~",
       "~~~~~~~~"
     ].join("\n")
+  },
+  {
+    // seed 401 (group 1 search 2026-09-21): 11 pushes, 1 optimal solution, 34% of positions are dead ends; contains a hop.
+    text: [
+      "~~~~~~~~",
+      "~..bA..~",
+      "~dEa*..b~",
+      "~b...#.~",
+      "~..ba..~",
+      "~@..C..~",
+      "~.a....~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 402 (group 1 search 2026-09-21): 9 pushes, 1 optimal solution, 54% of positions are dead ends.
+    text: [
+      "~~~~~~~~",
+      "~...a.a~",
+      "~..a.bA~",
+      "~...c.a~",
+      "~..D.B.~",
+      "~.....a~",
+      "~@a..aa*~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 411 (group 1 search 2026-09-21): 11 pushes, 1 optimal solution, 55% of positions are dead ends; contains a hop.
+    text: [
+      "~~~~~~~~",
+      "~#.....~",
+      "~.#.b..~",
+      "~.aDCc.~",
+      "~...A.#~",
+      "~......~",
+      "~..@.ca*~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 402 (group 1 search 2026-09-21): 17 pushes, 2 optimal solutions, 74% of positions are dead ends; contains a shuffle.
+    text: [
+      "~~~~~~~~",
+      "~.*c....~",
+      "~ab.@..~",
+      "~a..b..~",
+      "~...c..~",
+      "~....Ba~",
+      "~.C.a..~",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 402 (group 1 search 2026-09-21): 10 pushes, 2 optimal solutions, 80% of positions are dead ends; contains a hop.
+    text: [
+      "~~~~~~~~",
+      "~a...a*.~",
+      "~.bb@..~",
+      "~..aBac~",
+      "~.C....~",
+      "~#Aa...~",
+      "~....#.~",
+      "~~~~~~~~"
+    ].join("\n")
   }
 ];
 
