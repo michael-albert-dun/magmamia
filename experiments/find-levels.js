@@ -3,7 +3,11 @@
 //
 //   node experiments/find-levels.js --seed 1 --restarts 40 --steps 400 --top 12
 //
-// Options: --size N (board is N by N, default 6), --min-pushes, --max-slack,
+// The board is an (N+2) by (N+2) grid: an N by N interior surrounded by a border
+// ring whose cells are each infinite lava (~) or wall (#), so nothing depends on
+// what lies beyond the grid.
+//
+// Options: --size N (interior is N by N, default 6), --min-pushes, --max-slack,
 // --max-solutions (filters for what gets reported), --json FILE (write the
 // reported levels there as well).
 const fs = require("fs");
@@ -12,6 +16,8 @@ const { analyse, solutionEvents } = require("../src/solver.js");
 
 const args = parseArgs(process.argv.slice(2));
 const SIZE = Number(args.size ?? 6);
+const GRID = SIZE + 2; // Interior plus the border ring.
+const RING_WALL_CHANCE = 0.12;
 const SEED = Number(args.seed ?? 1);
 const RESTARTS = Number(args.restarts ?? 40);
 const STEPS = Number(args.steps ?? 400);
@@ -49,41 +55,60 @@ const randInt = (lo, hi) => lo + Math.floor(rng() * (hi - lo + 1)); // inclusive
 const pick = (list) => list[Math.floor(rng() * list.length)];
 
 function cloneLevel(level) {
-  return { ...level, cells: level.cells.slice(), walls: level.walls.slice(), goals: level.goals.slice() };
+  return { ...level, cells: level.cells.slice(), walls: level.walls.slice(), abyss: level.abyss.slice(), goals: level.goals.slice() };
+}
+
+function isRing(index) {
+  const x = index % GRID;
+  const y = Math.floor(index / GRID);
+  return x === 0 || y === 0 || x === GRID - 1 || y === GRID - 1;
 }
 
 function randomLevel() {
-  const n = SIZE * SIZE;
+  const n = GRID * GRID;
   const cells = new Int16Array(n);
   const walls = new Uint8Array(n);
+  const abyss = new Uint8Array(n);
   const goals = new Uint8Array(n);
-  const order = [...Array(n).keys()];
-  for (let i = n - 1; i > 0; i -= 1) {
+  for (let i = 0; i < n; i += 1) {
+    if (!isRing(i)) continue;
+    if (rng() < RING_WALL_CHANCE) walls[i] = 1;
+    else abyss[i] = 1;
+  }
+  // Everything else lives in the interior.
+  const order = [...Array(n).keys()].filter((i) => !isRing(i));
+  for (let i = order.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rng() * (i + 1));
     [order[i], order[j]] = [order[j], order[i]];
   }
   const player = order.pop();
-  let goal;
-  do goal = order[Math.floor(rng() * order.length)]; while (goal === undefined);
+  const goal = order[Math.floor(rng() * order.length)];
   goals[goal] = 1;
   const free = order.filter((i) => i !== goal);
   for (let k = randInt(0, 3); k > 0 && free.length > 0; k -= 1) walls[free.pop()] = 1;
-  const anyCell = [...order]; // may include the goal cell for lava/stacks
-  const usable = anyCell.filter((i) => !walls[i]);
+  const usable = order.filter((i) => !walls[i]); // May include the goal cell for lava/stacks.
   for (let k = randInt(3, 8); k > 0 && usable.length > 0; k -= 1) {
     cells[usable.splice(Math.floor(rng() * usable.length), 1)[0]] = -pick([1, 1, 1, 2, 2, 3]);
   }
   for (let k = randInt(2, 4); k > 0 && usable.length > 0; k -= 1) {
     cells[usable.splice(Math.floor(rng() * usable.length), 1)[0]] = pick([1, 1, 2, 2, 3, 4]);
   }
-  return { rows: SIZE, cols: SIZE, cells, walls, goals, player };
+  return { rows: GRID, cols: GRID, cells, walls, abyss, goals, player };
 }
 
-// One random local change. Returns null if the result would be invalid.
+// One random local change. Returns null if the result would be invalid. Border
+// cells only ever switch between wall and infinite lava; everything else changes
+// only inside the interior.
 function mutate(level) {
   const next = cloneLevel(level);
   const n = next.cells.length;
   const i = Math.floor(rng() * n);
+  if (isRing(i)) {
+    if (rng() < 0.5) return null; // Border changes are rarer than interior ones.
+    next.walls[i] = 1 - next.walls[i];
+    next.abyss[i] = 1 - next.walls[i];
+    return next;
+  }
   const roll = rng();
   if (roll < 0.35) {
     // Replace a cell's contents outright.
@@ -102,9 +127,9 @@ function mutate(level) {
   } else if (roll < 0.8) {
     next.player = i;
   } else {
-    // Swap the contents of two cells.
+    // Swap the contents of two interior cells.
     const j = Math.floor(rng() * n);
-    if (i === j || i === next.player || j === next.player) return null;
+    if (isRing(j) || i === j || i === next.player || j === next.player) return null;
     [next.cells[i], next.cells[j]] = [next.cells[j], next.cells[i]];
     [next.walls[i], next.walls[j]] = [next.walls[j], next.walls[i]];
   }
@@ -115,6 +140,8 @@ function mutate(level) {
 }
 
 // Is the level still no worse without this piece? If so the piece is decoration.
+// Pieces are stacks, lava, walls, and the walls (only) on the border: taking a
+// border wall away leaves infinite lava there.
 function decorativePieces(level, base) {
   let count = 0;
   for (let i = 0; i < level.cells.length; i += 1) {
@@ -126,6 +153,7 @@ function decorativePieces(level, base) {
     const without = cloneLevel(level);
     without.cells[i] = 0;
     without.walls[i] = 0;
+    if (isRing(i)) without.abyss[i] = 1;
     const result = analyse(without, { full: false, maxStates: MAX_STATES_PIECE });
     if (result.truncated || !result.solvable) continue;
     if (isStack ? result.pushes <= base.pushes : result.pushes === base.pushes) count += 1;

@@ -1,7 +1,7 @@
 // Browser test bench for the lava-and-blocks rules: type in any level, change
 // the objective, try things out. The rules themselves (parseLevel, formatLevel,
 // move, isWon, DIRECTIONS, OBJECTIVES) live in engine.js, the preset levels
-// (PRESET_LEVELS) in levels.js, and the board drawing (drawBoard, CELL, RIM) in
+// (PRESET_LEVELS) in levels.js, and the board drawing (drawBoard, CELL) in
 // render.js, all loaded before this file. The player-facing game is play.js.
 
 const KEY_DIRECTIONS = {
@@ -14,11 +14,13 @@ const REFUSAL_TEXT = {
   wall: "There's a wall there.",
   "stack-blocked": "That stack is against a wall and won't move.",
   lava: "That's lava, so the move was refused.",
-  edge: "That's the edge of the board (lava), so the move was refused."
+  edge: "That's the edge of the board (lava), so the move was refused.",
+  abyss: "That's infinite lava, so the move was refused."
 };
 const DEATH_TEXT = {
   lava: "You stepped into the lava. The level has restarted.",
-  edge: "You stepped off the edge into the lava. The level has restarted."
+  edge: "You stepped off the edge into the lava. The level has restarted.",
+  abyss: "You stepped into the infinite lava. The level has restarted."
 };
 
 const state = {
@@ -166,9 +168,9 @@ function handleKeyDown(event) {
 function handleBoardClick(event) {
   const s = state.current;
   const rect = elements.board.getBoundingClientRect();
-  const scale = (s.cols * CELL + 2 * RIM) / rect.width;
-  const x = Math.floor(((event.clientX - rect.left) * scale - RIM) / CELL);
-  const y = Math.floor(((event.clientY - rect.top) * scale - RIM) / CELL);
+  const scale = (s.cols * CELL) / rect.width;
+  const x = Math.floor(((event.clientX - rect.left) * scale) / CELL);
+  const y = Math.floor(((event.clientY - rect.top) * scale) / CELL);
   const dx = x - (s.player % s.cols);
   const dy = y - Math.floor(s.player / s.cols);
   if (Math.abs(dx) + Math.abs(dy) !== 1) return;

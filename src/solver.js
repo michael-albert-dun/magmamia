@@ -10,10 +10,11 @@ const solverEngine = typeof module !== "undefined" && module.exports ? require("
 
 const SOLVER_DIRS = Object.keys(solverEngine.DIRECTIONS);
 
-// Flood-fill the floor cells the player can walk to. Stacks, lava and walls
-// all stop the player (walking into a stack is a push, not a walk).
+// Flood-fill the floor cells the player can walk to. Stacks, lava, infinite lava
+// and walls all stop the player (walking into a stack is a push, not a walk).
 function regionOf(state) {
   const { cols, rows, cells, walls, goals } = state;
+  const abyss = state.abyss; // Undefined on states built without infinite lava.
   const seen = new Uint8Array(cells.length);
   const region = [];
   const pending = [state.player];
@@ -33,7 +34,7 @@ function regionOf(state) {
       const ny = y + dy;
       if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
       const n = ny * cols + nx;
-      if (seen[n] || walls[n] || cells[n] !== 0) continue;
+      if (seen[n] || walls[n] || (abyss && abyss[n]) || cells[n] !== 0) continue;
       seen[n] = 1;
       pending.push(n);
     }
@@ -177,7 +178,7 @@ function solutionEvents(start, path) {
     const outcome = solverEngine.move({ ...state, player: from }, dir);
     const landed = new Set();
     for (const landing of outcome.drops) {
-      if (landing < 0) {
+      if (landing < 0 || (state.abyss && state.abyss[landing])) {
         events.add("edge");
         continue;
       }

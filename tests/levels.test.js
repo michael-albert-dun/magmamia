@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { parseLevel } = require("../src/engine.js");
+const { parseLevel, hasClosedBorder } = require("../src/engine.js");
 const { PRESET_LEVELS, CURATED_LEVELS } = require("../src/levels.js");
 const { analyse } = require("../src/solver.js");
 const { solve } = require("./solve.js");
@@ -9,8 +9,8 @@ const { solve } = require("./solve.js");
 const SANDBOX = /sandbox/;
 
 for (const level of PRESET_LEVELS) {
-  test(`preset "${level.name}" parses`, () => {
-    parseLevel(level.text);
+  test(`preset "${level.name}" parses and has a closed border`, () => {
+    assert.equal(hasClosedBorder(parseLevel(level.text)), true);
   });
 
   if (SANDBOX.test(level.name)) continue;
@@ -23,6 +23,10 @@ for (const level of PRESET_LEVELS) {
 // The player-facing levels must all be genuine "reach the goal" puzzles:
 // solvable, and needing at least one push (not a stroll to the crown).
 CURATED_LEVELS.forEach((level, index) => {
+  test(`curated level ${index + 1} has a closed border`, () => {
+    assert.equal(hasClosedBorder(parseLevel(level.text)), true);
+  });
+
   test(`curated level ${index + 1} is solvable and needs pushing`, () => {
     const result = analyse(parseLevel(level.text), { maxStates: 200000 });
     assert.equal(result.truncated, false);

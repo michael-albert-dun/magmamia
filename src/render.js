@@ -2,7 +2,6 @@
 // (bench.js). Needs no state of its own: give it an SVG element and a state.
 const SVG_NS = "http://www.w3.org/2000/svg";
 const CELL = 48;
-const RIM = CELL; // Width of the infinite-lava border: one full tile on every side.
 const MIN_CELL_PX = 28; // Below this the board scrolls instead of shrinking.
 const CROWN_POINTS = "-12,8 -12,-6 -6,0 0,-9 6,0 12,-6 12,8";
 
@@ -13,33 +12,25 @@ function svgElement(name, attributes, parent) {
   return element;
 }
 
-// Draw the whole board as SVG into `svg`, replacing whatever was there.
+// Draw the whole board as SVG into `svg`, replacing whatever was there. The
+// board is exactly the grid: its border cells are ordinary walls and infinite
+// lava, drawn like any other cell.
 // options.chips is an optional list of { x, y, count, lost } push-preview tags
-// (from previewPushes in engine.js) drawn over the board; x and y may be -1 or
-// the board size, which puts a tag on the border tile.
+// (from previewPushes in engine.js) drawn over the board. A tag for a tile
+// outside the grid (only possible on a board without a closed border) falls
+// outside the drawing and isn't visible.
 function drawBoard(svg, s, options = {}) {
-  const width = s.cols * CELL + 2 * RIM;
-  const height = s.rows * CELL + 2 * RIM;
+  const width = s.cols * CELL;
+  const height = s.rows * CELL;
   svg.replaceChildren();
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   svg.setAttribute("aria-label", `Game board, ${s.rows} rows by ${s.cols} columns`);
   svg.style.maxWidth = `${width}px`;
-  svg.style.minWidth = `${Math.min(width, (s.cols + 2) * MIN_CELL_PX)}px`;
+  svg.style.minWidth = `${Math.min(width, s.cols * MIN_CELL_PX)}px`;
 
-  // The border is a ring of lava tiles of infinite depth, marked with ∞ where
-  // real lava shows its depth.
-  for (let y = -1; y <= s.rows; y += 1) {
-    for (let x = -1; x <= s.cols; x += 1) {
-      if (x >= 0 && x < s.cols && y >= 0 && y < s.rows) continue;
-      const left = RIM + x * CELL;
-      const top = RIM + y * CELL;
-      svgElement("rect", { class: "cell-lava is-rim", x: left, y: top, width: CELL, height: CELL }, svg);
-      svgElement("text", { class: "cell-number on-rim", x: left + CELL / 2, y: top + CELL / 2 }, svg).textContent = "∞";
-    }
-  }
   for (let y = 0; y < s.rows; y += 1) {
     for (let x = 0; x < s.cols; x += 1) {
-      renderCell(svg, s, y * s.cols + x, RIM + x * CELL, RIM + y * CELL);
+      renderCell(svg, s, y * s.cols + x, x * CELL, y * CELL);
     }
   }
   drawChips(svg, options.chips || []);
@@ -53,13 +44,13 @@ function drawChips(svg, chips) {
     const key = `${chip.x},${chip.y}`;
     const slot = perCell.get(key) || 0;
     perCell.set(key, slot + 1);
-    const left = RIM + chip.x * CELL + CELL - 32 - slot * 30;
-    const top = RIM + chip.y * CELL + CELL - 21;
+    const left = chip.x * CELL + CELL - 32 - slot * 30;
+    const top = chip.y * CELL + CELL - 21;
     const group = svgElement("g", { class: chip.lost ? "preview-chip is-lost" : "preview-chip" }, svg);
     svgElement("rect", { x: left, y: top, width: 28, height: 17, rx: 8.5 }, group);
     svgElement("text", { x: left + 14, y: top + 8.5 }, group).textContent = `+${chip.count}`;
     const title = chip.lost
-      ? `${chip.count} ${chip.count === 1 ? "block" : "blocks"} would fall off the edge and be lost`
+      ? `${chip.count} ${chip.count === 1 ? "block" : "blocks"} would fall into the infinite lava and be lost`
       : `${chip.count} ${chip.count === 1 ? "block" : "blocks"} would land here`;
     svgElement("title", {}, group).textContent = title;
   }
@@ -74,6 +65,12 @@ function renderCell(svg, s, index, left, top) {
 
   if (s.walls[index]) {
     svgElement("rect", { class: "cell-wall", ...box }, svg);
+    return;
+  }
+  if (s.abyss && s.abyss[index]) {
+    // Infinitely deep lava: like lava, marked with ∞ where real lava shows its depth.
+    svgElement("rect", { class: "cell-lava", ...box }, svg);
+    svgElement("text", { class: "cell-number on-abyss", x: centerX, y: centerY }, svg).textContent = "∞";
     return;
   }
   if (value < 0) {

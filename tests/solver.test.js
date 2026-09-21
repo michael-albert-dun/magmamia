@@ -71,7 +71,8 @@ function randomLevelText(rng, rows, cols) {
     for (let x = 0; x < cols; x += 1) {
       const r = rng();
       if (r < 0.5) row.push(".");
-      else if (r < 0.62) row.push("#");
+      else if (r < 0.6) row.push("#");
+      else if (r < 0.66) row.push("~");
       else if (r < 0.8) row.push(String.fromCharCode(97 + Math.floor(rng() * 3)));
       else row.push(String.fromCharCode(65 + Math.floor(rng() * 4)));
     }
@@ -83,7 +84,7 @@ function randomLevelText(rng, rows, cols) {
   const [px, py] = free.splice(Math.floor(rng() * free.length), 1)[0];
   grid[py][px] = "@";
   const [gx, gy] = [Math.floor(rng() * cols), Math.floor(rng() * rows)];
-  if (grid[gy][gx] === "#" || grid[gy][gx] === "@") return null;
+  if (grid[gy][gx] === "#" || grid[gy][gx] === "~" || grid[gy][gx] === "@") return null;
   grid[gy][gx] += "*";
   return grid.map((row) => row.join("")).join("\n");
 }

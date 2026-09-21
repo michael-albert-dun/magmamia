@@ -1,7 +1,7 @@
 // Run with: node --test tests/
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { parseLevel, formatLevel, move, previewPushes, isWon } = require("../src/engine.js");
+const { parseLevel, formatLevel, hasClosedBorder, move, previewPushes, isWon } = require("../src/engine.js");
 
 // Apply each direction in turn (ignoring refusals and deaths) and return the
 // resulting level text.
@@ -170,4 +170,55 @@ test("push previews agree with what a push actually does", () => {
   const outcome = move(state, preview.direction);
   const landedCells = new Set(preview.landings.filter((l) => !l.lost).map((l) => l.y * state.cols + l.x));
   assert.deepEqual([...landedCells].sort(), [...new Set(outcome.drops.filter((d) => d >= 0))].sort());
+});
+
+test("infinite lava cells parse, print and can't be goals", () => {
+  const text = "~~~~\n~@a~\n~.C~\n~~~~";
+  assert.equal(formatLevel(parseLevel(text)), text);
+  assert.throws(() => parseLevel("@~*"), /Infinite lava can't be a goal/);
+});
+
+test("stepping onto infinite lava is fatal, or refused when lavaFatal is off", () => {
+  const fatal = move(parseLevel("@~"), "right");
+  assert.equal(fatal.result, "died");
+  assert.equal(fatal.reason, "abyss");
+  const gentle = move(parseLevel("@~"), "right", { lavaFatal: false });
+  assert.equal(gentle.result, "refused");
+  assert.equal(gentle.reason, "abyss");
+});
+
+test("blocks landing on infinite lava are lost and it never changes", () => {
+  const outcome = move(parseLevel("@C.~"), "right");
+  assert.equal(outcome.result, "pushed");
+  // Blocks land on the floor, on the infinite lava (lost), and then off the grid.
+  assert.equal(formatLevel(outcome.state), ".@A~");
+  assert.deepEqual(outcome.drops, [2, 3, -1]);
+  assert.equal(outcome.state.cells[3], 0, "the abyss cell still holds nothing");
+});
+
+test("a stack next to infinite lava can be pushed into it, unlike a wall", () => {
+  const result = move(parseLevel("@B~"), "right");
+  assert.equal(result.result, "pushed");
+  assert.equal(formatLevel(result.state), ".@~");
+  assert.equal(move(parseLevel("@B#"), "right").result, "refused");
+});
+
+test("blocks piling against a wall after infinite lava are lost with it", () => {
+  // Second block would pile on the cell before the wall, which is the abyss.
+  assert.equal(play("@B~#", ["right"]), ".@~#");
+});
+
+test("closed borders", () => {
+  assert.equal(hasClosedBorder(parseLevel("~~~\n~@~\n~~~")), true);
+  assert.equal(hasClosedBorder(parseLevel("###\n#@~\n###")), true, "a mix of walls and infinite lava");
+  assert.equal(hasClosedBorder(parseLevel("~~~\n~@.\n~~~")), false, "a floor cell on the edge");
+  assert.equal(hasClosedBorder(parseLevel("@Eba.#")), false);
+});
+
+test("push previews put lost blocks on the infinite lava cell that swallows them", () => {
+  const previews = previewPushes(parseLevel("~~~~~\n~@B.~\n~~~~~"));
+  assert.deepEqual(previews[0].landings, [
+    { x: 3, y: 1, count: 1, lost: false },
+    { x: 4, y: 1, count: 1, lost: true }
+  ]);
 });

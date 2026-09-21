@@ -1,7 +1,8 @@
-# The floor is lava (working title)
+# Magma Mia!
 
 A box-pushing puzzle on a grid. Blocks are stacked, not slid: pushing a stack
-topples it, and the fallen blocks are used to bridge lava.
+topples it, and the fallen blocks are used to bridge lava. (While it was being
+designed it was called "The floor is lava".)
 
 This is an early design sketch. Anything marked *(open)* is undecided.
 
@@ -11,10 +12,16 @@ Play is on a rectangular grid. Each cell is in exactly one of these states:
 
 - **Floor**: can be walked on.
 - **Lava**: has a depth (1 or more). Walking onto lava is fatal.
+- **Infinite lava**: lava of infinite depth. Walking onto it is fatal, and a block
+  landing on it is lost, so it can never be filled.
 - **Stack**: a pile of blocks with a height (1 or more), standing on floor.
 - **Wall**: immovable and impassable.
 
-The edge of the board is a rim of lava of infinite depth. It is not a wall.
+**The border.** Every cell around the edge of the board must be infinite lava or
+wall, in any mix. So there is nothing beyond the grid to think about: a board is
+just a grid with that constraint on its edge cells. (The engine still treats
+anything past the edge as infinite lava, so a level without a closed border works,
+but all the game's levels have one.)
 
 A **goal** is not a cell state but a marker that any cell can carry: floor, lava
 or a stack. It stays put when the cell's contents change. If the cell is lava,
@@ -29,8 +36,8 @@ The player moves one cell at a time, orthogonally (no diagonals). The player
 cannot move onto a wall. Moving into a stack is a push (below); a stack is never
 walked on.
 
-By default, walking onto lava is fatal and the level restarts. A setting will
-allow a gentler mode in which that move is simply refused instead.
+By default, walking onto lava or infinite lava is fatal and the level restarts. A
+setting allows a gentler mode in which that move is simply refused instead.
 
 ## Pushing
 
@@ -43,8 +50,9 @@ Moving into a stack pushes it, and the stack topples away from the player.
   topple in turn.
 - A block landing on **lava** makes it 1 shallower and is used up. Lava at depth
   0 has become floor, not a stack.
-- A block landing on the board's edge (the infinite lava) is lost. So a stack can
-  be pushed off the edge, destroying its blocks.
+- A block landing on **infinite lava** is lost and the cell stays as it was. So a
+  stack next to infinite lava can be pushed into it, destroying its blocks, unlike
+  a stack against a wall, which can't be pushed at all.
 - Blocks that would land on a **wall**, or beyond one, all pile up on the last
   cell before it. *(open)* If that cell is lava, the piled blocks fill it first
   and only then build a stack (the engine simply adds 1 per block to the cell's
@@ -83,13 +91,12 @@ floor, and the last two would reach the wall, so they pile onto that same stack.
   that lava and stacks differ in lightness and stay distinguishable for
   colour-blind players.
 - Numbers are always positive; the colour says whether a cell is lava or a stack.
-- **Border**: a full tile of lava on every side, in the ordinary lava colour,
-  marked with ∞ where real lava shows its depth. It is the infinitely deep lava
-  that blocks are lost into.
+- **Infinite lava**: the ordinary lava colour, marked with ∞ where real lava shows
+  its depth. On a closed board it forms the border, alongside any border walls.
 - **Push preview** (an option, off by default): with it on, standing next to a
   stack shows a small `+n` tag in the corner of each cell its blocks would land
-  on (a wall pile is summed into one tag). Blocks that would be lost off the edge
-  get a dashed tag on the border tile. It shows one push ahead only, not a plan,
+  on (a wall pile is summed into one tag). Blocks that would be lost into infinite lava
+  get a dashed tag on that cell. It shows one push ahead only, not a plan,
   and is switched on in the game's info panel. It exists because it's easy to
   assume a stack of 2 next to depth-2 lava fills it, when the second block
   actually lands on the next cell. It's off by default because working out where
@@ -121,6 +128,7 @@ input.
 | --- | --- |
 | `.` | floor |
 | `#` | wall |
+| `~` | infinite lava |
 | `a` to `z` | lava of depth 1 to 26 |
 | `A` to `Z` | stack of height 1 to 26 |
 | `@` | the player, standing on floor |
@@ -133,7 +141,23 @@ A goal cell is written as its ordinary character followed by `*`. So `.*` is a
 bare goal, `a*` is a goal on depth-1 lava, `C*` is a goal under a stack of height
 3, and `@*` is the player starting on the goal. Rows are therefore not a fixed
 number of characters wide, so a row has to be read cell by cell: a `*` always
-belongs to the character before it.
+belongs to the character before it. (`#*` and `~*` are errors: a wall or infinite
+lava can't be a goal.)
+
+A closed board has `~` or `#` in every cell around its edge. For example, the
+game's L-shaped corner puzzle is:
+
+```text
+~~~~~~
+~@..A~
+~###.~
+~###.~
+~###.*~
+~~~~~~
+```
+
+The box `A` is stuck in the corner, but pushing it right sends it into the
+infinite lava, which clears the way to the goal.
 
 ## Levels
 
@@ -143,7 +167,7 @@ achieved is *(open)*.
 
 The board is bigger than in the other games, since interesting levels need room.
 Either it scrolls on a phone, or the game is desktop-only. A default around 8
-wide by 12 tall is the starting guess; the size should be a parameter rather than
+wide by 12 tall (counting the border) is the starting guess; the size should be a parameter rather than
 a constant. Original Sokoban (32 by 20) is treated as the upper bound.
 
 ## To think about
@@ -212,11 +236,12 @@ solvable, and what share of reachable positions are dead ends. It also lists any
 unusual events in a solution: covering the goal, piling against a wall, landing
 on an existing stack, or losing blocks off the edge.
 
-`experiments/find-levels.js` starts from random 6 by 6 boards and hill-climbs on a
-score built from those measurements, keeping levels that meet the filters: at
+`experiments/find-levels.js` starts from a random 6 by 6 interior inside a border
+ring (8 by 8 in all) whose cells are each infinite lava or wall, and hill-climbs
+on a score built from those measurements, keeping levels that meet the filters: at
 least 6 pushes, slack of at most 2 ("tightish"), at most 3 optimal solutions,
 no decorative pieces (a stack, lava cell or wall whose removal doesn't change the
-fewest pushes), and at least one unusual event. Run it with, for example:
+fewest pushes; a border wall counts too, replaced by infinite lava), and at least one unusual event. Run it with, for example:
 
 ```sh
 node experiments/find-levels.js --seed 1 --restarts 10 --steps 400 --top 10 --verbose 1
@@ -229,4 +254,3 @@ state cap, and those levels are discarded.
 ## Ideas not yet decided
 
 - Undo and restart: unlimited undo is the working default, but this is *(open)*.
-- A new name. (The repository directory is still `soakaway`.) Naming is deferred.

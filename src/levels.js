@@ -53,7 +53,7 @@ const PRESET_LEVELS = [
   {
     name: "README worked example (sandbox)",
     objective: "lava",
-    text: "@Eba.#"
+    text: ["~~~~~~~~", "~@Eba.#~", "~~~~~~~~"].join("\n")
   }
 ];
 
@@ -64,25 +64,29 @@ const CURATED_LEVELS = [
   { text: PRESET_LEVELS[0].text },
   {
     // An L-shaped corridor with the box stuck in the corner. In Sokoban that
-    // would be a dead end; here the corner is on the board's edge, so the box
-    // can be pushed off it (the intro to losing blocks off the edge).
+    // would be a dead end; here the corner is next to infinite lava, so the box
+    // can be pushed into it and lost (the intro to losing blocks).
     text: [
-      "@..A",
-      "###.",
-      "###.",
-      "###.*"
+      "~~~~~~",
+      "~@..A~",
+      "~###.~",
+      "~###.~",
+      "~###.*~",
+      "~~~~~~"
     ].join("\n")
   },
   { text: PRESET_LEVELS[1].text },
   {
     // seed 4: 12 pushes, 2 optimal solutions, slack 1.
     text: [
-      "..d.*a.",
-      ".C.a#.",
-      "..abA@",
-      ".#..Ca",
-      "#.....",
-      "......"
+      "~~~~~~~~",
+      "~..d.*a.~",
+      "~.C.a#.~",
+      "~..abA@~",
+      "~.#..Ca~",
+      "~#.....~",
+      "~......~",
+      "~~~~~~~~"
     ].join("\n")
   },
   {
@@ -90,45 +94,53 @@ const CURATED_LEVELS = [
     // (The search's version had a depth-2 lava cell in the bottom-left corner;
     // it changed nothing about the puzzle, so it is floor here.)
     text: [
-      "......",
-      "...#.c*",
-      "..@D..",
-      "...#..",
-      "..#..A",
-      ".#...."
+      "~~~~~~~~",
+      "~......~",
+      "~...#.c*~",
+      "~..@D..~",
+      "~...#..~",
+      "~..#..A~",
+      "~.#....~",
+      "~~~~~~~~"
     ].join("\n")
   },
   {
     // seed 14: 9 pushes, 2 optimal solutions, slack 1; 38% of positions are dead ends.
     text: [
-      "a.*...c",
-      ".b.#d.",
-      ".aa...",
-      ".a....",
-      ".B....",
-      "@.b.a."
+      "~~~~~~~~",
+      "~a.*...c~",
+      "~.b.#d.~",
+      "~.aa...~",
+      "~.a....~",
+      "~.B....~",
+      "~@.b.a.~",
+      "~~~~~~~~"
     ].join("\n")
   },
   {
     // seed 17: 10 pushes, 1 optimal solution, slack 0; 69% of positions are dead ends.
     text: [
-      "......",
-      "....c.",
-      "...A.b",
-      "..b.aD",
-      "..b...",
-      "@a*..a."
+      "~~~~~~~~",
+      "~......~",
+      "~....c.~",
+      "~...A.b~",
+      "~..b.aD~",
+      "~..b...~",
+      "~@a*..a.~",
+      "~~~~~~~~"
     ].join("\n")
   },
   {
     // seed 11: 12 pushes, 1 optimal solution, slack 0; 74% of positions are dead ends.
     text: [
-      "....a.*",
-      "..a.@b",
-      "...b..",
-      "......",
-      "...Bb.",
-      "..Cb.."
+      "~~~~~~~~",
+      "~....a.*~",
+      "~..a.@b~",
+      "~...b..~",
+      "~......~",
+      "~...Bb.~",
+      "~..Cb..~",
+      "~~~~~~~~"
     ].join("\n")
   }
 ];
