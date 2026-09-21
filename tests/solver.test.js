@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { parseLevel, move, isWon } = require("../src/engine.js");
-const { analyse, solutionEvents, regionOf } = require("../src/solver.js");
+const { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, regionOf } = require("../src/solver.js");
 const { PRESET_LEVELS } = require("../src/levels.js");
 const { solve } = require("./solve.js");
 
@@ -124,6 +124,30 @@ test("shuffle: merge two singles into a 2, then push it to lay two singles again
   // Just merging isn't a shuffle; neither is pushing an ordinary 2-stack.
   assert.ok(!solutionEvents(start, [merge]).has("shuffle"));
   assert.ok(!solutionEvents(parseLevel("@.B......"), [{ from: 1, dir: "right" }]).has("shuffle"));
+});
+
+test("coupling: independent shoves are loose, a chain of pushes is tight", () => {
+  // Fill the lava on each side: two pushes that touch nothing in common.
+  const independent = parseLevel("aA@Aa");
+  const loose = solutionCoupling(independent, analyse(independent, { objective: "lava" }).path);
+  assert.equal(loose.pushes, 2);
+  assert.equal(loose.criticalPath, 1);
+  assert.equal(loose.coupling, 0.5);
+  // The caterpillar: each push sets up the next.
+  const chain = parseLevel("#########\n#@.B.aa.*#\n#########");
+  const tight = solutionCoupling(chain, analyse(chain).path);
+  assert.equal(tight.pushes, 3);
+  assert.equal(tight.criticalPath, 3);
+  assert.equal(tight.coupling, 1);
+});
+
+test("trivial disposals: a stack whose only push throws it into infinite lava", () => {
+  // Walls above and below, infinite lava to the right, the player on the left.
+  assert.deepEqual(trivialDisposalStacks(parseLevel("#####\n#@A~#\n#####")), [7]);
+  // The same stack with room to move sideways has more than one way to go.
+  assert.deepEqual(trivialDisposalStacks(parseLevel(".....\n.@A~.\n.....")), []);
+  // One possible direction, but it doesn't end in infinite lava: not a chore.
+  assert.deepEqual(trivialDisposalStacks(parseLevel("#####\n#@A.#\n#####")), []);
 });
 
 test("hop: a stack topples over lava it only shallows", () => {

@@ -295,6 +295,67 @@ function solutionEvents(start, path) {
   return events;
 }
 
+// How tightly an optimal solution's pushes depend on each other. Two pushes are
+// dependent if they touch a common cell (the stack pushed, or a cell a block lands
+// on); the critical path is the longest chain of dependent pushes in order. A
+// solution of independent shoves, each stack pushed straight at its own lava, has a
+// critical path of 1 however many pushes it takes: the loose, "slack" kind of level.
+// A chain, where each push sets up the next, has a critical path equal to its
+// length. Returns { pushes, criticalPath, coupling } with coupling = criticalPath /
+// pushes, between 1/pushes and 1. Walking between pushes is ignored.
+function solutionCoupling(start, path) {
+  let state = start;
+  const touched = [];
+  for (const { from, dir } of path) {
+    const outcome = solverEngine.move({ ...state, player: from }, dir);
+    const cells = new Set([outcome.state.player]);
+    for (const landing of outcome.drops) if (landing >= 0) cells.add(landing);
+    touched.push(cells);
+    state = outcome.state;
+  }
+  const chain = touched.map(() => 1);
+  let criticalPath = 0;
+  for (let j = 0; j < touched.length; j += 1) {
+    for (let i = 0; i < j; i += 1) {
+      if ([...touched[i]].some((cell) => touched[j].has(cell))) chain[j] = Math.max(chain[j], chain[i] + 1);
+    }
+    criticalPath = Math.max(criticalPath, chain[j]);
+  }
+  return { pushes: path.length, criticalPath, coupling: path.length === 0 ? 1 : criticalPath / path.length };
+}
+
+// Stacks that can only ever be pushed one way, and that way sends every block
+// straight into infinite lava: chores rather than choices, obvious at a glance.
+// Judged on the initial geometry alone: a direction is possible if the cell ahead
+// isn't a wall and the cell behind isn't a wall or infinite lava (lava behind might
+// be filled later, so it still counts). Returns the cells of such stacks.
+function trivialDisposalStacks(state) {
+  const { cols, rows, cells, walls } = state;
+  const abyss = state.abyss;
+  const isAbyss = (i) => Boolean(abyss && abyss[i]);
+  const trivial = [];
+  for (let q = 0; q < cells.length; q += 1) {
+    if (cells[q] <= 0) continue;
+    const x = q % cols;
+    const y = (q - x) / cols;
+    const possible = [];
+    for (const name of SOLVER_DIRS) {
+      const { dx, dy } = solverEngine.DIRECTIONS[name];
+      const ax = x + dx;
+      const ay = y + dy;
+      const bx = x - dx;
+      const by = y - dy;
+      if (ax < 0 || ay < 0 || ax >= cols || ay >= rows || bx < 0 || by < 0 || bx >= cols || by >= rows) continue;
+      const ahead = ay * cols + ax;
+      const behind = by * cols + bx;
+      if (walls[ahead] || walls[behind] || isAbyss(behind)) continue;
+      possible.push({ name, ahead });
+    }
+    if (possible.length === 1 && isAbyss(possible[0].ahead)) trivial.push(q);
+  }
+  return trivial;
+}
+
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { analyse, solutionEvents, regionOf };
+  module.exports = { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, regionOf };
 }
