@@ -18,6 +18,11 @@
   --lava-edge: #8a1c16;
   --stack: #e2c47f;
   --stack-edge: #a5803c;
+  /* Waterlogged blocks ("There will be mud"): the same sandy hue, darkened like wet
+     sand, so wet and dry read as the same material in two states, not two materials.
+     Revisit alongside the brown/red colourblind check once the mechanic settles. */
+  --stack-wet: #8a6b3a;
+  --stack-wet-edge: #5c4620;
   --wall: #3b3f45;
   --player: #2b5fb4;
   --crown: #f2b600;
@@ -109,6 +114,11 @@ textarea {
   stroke-width: 2;
 }
 
+.stack.is-wet {
+  fill: var(--stack-wet);
+  stroke: var(--stack-wet-edge);
+}
+
 .cell-number {
   text-anchor: middle;
   dominant-baseline: central;
@@ -130,6 +140,11 @@ textarea {
 
 .cell-number.on-stack {
   fill: #4a3512;
+}
+
+.cell-number.on-wet {
+  /* The dark stack text doesn't read on the darker wet fill; go light instead. */
+  fill: #f4ead2;
 }
 
 .crown {
@@ -285,6 +300,82 @@ code {
 .game-header h1 {
   margin: 0;
   font-size: 1.5rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.text-button {
+  padding: 6px 4px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  color: var(--ink);
+}
+
+.text-button[hidden] {
+  display: none;
+}
+
+/* Home screen: pick a set of levels. */
+
+.mode-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.mode-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.mode-card:hover {
+  border-color: var(--stack-edge);
+}
+
+.mode-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.mode-blurb {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.mode-progress {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* Level-select screen: a grid of level buttons within one set. */
+
+.levels-grid {
+  margin-top: 4px;
+}
+
+.levels-grid .level-button {
+  min-width: 44px;
+  height: 44px;
+  font-size: 1.05rem;
 }
 
 .icon-button {

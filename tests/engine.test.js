@@ -215,6 +215,53 @@ test("closed borders", () => {
   assert.equal(hasClosedBorder(parseLevel("@Eba.#")), false);
 });
 
+// "There will be mud": waterlogged blocks, K-T (height 1-10), alongside dry A-J.
+test("waterlogged stacks parse, print and stay under the dry ones' letters", () => {
+  const text = ["######", "#@Kk.#", "#T.J.#", "######"].join("\n");
+  assert.equal(formatLevel(parseLevel(text)), text);
+  assert.throws(() => parseLevel("@U"), /Unexpected "U"/);
+});
+
+test("a waterlogged block fills lava outright, however deep, using up just the one block", () => {
+  // Dry: a height-1 block only shallows depth-5 lava by one.
+  assert.equal(play("@Ae.", ["right"]), ".@d.");
+  // Wet: the same height-1 block fills it completely in one go.
+  assert.equal(play("@Ke.", ["right"]), ".@..");
+});
+
+test("a waterlogged block waterlogs a dry stack it lands on, and the reverse keeps it wet", () => {
+  // The README's own example: a toppled wet stack adds one block to a dry stack.
+  assert.equal(play("@KB.", ["right"]), ".@M.");
+  // A dry block landing on an already-wet stack doesn't wash it clean again.
+  assert.equal(play("@AK.", ["right"]), ".@L.");
+});
+
+test("only the block that actually touches a wet stack is waterlogged, not the rest of its push", () => {
+  // A dry height-3 stack spreads one block per cell: only the first lands on the
+  // existing wet single, so only that landing grows and stays wet (L); the other two
+  // land on bare floor and are ordinary dry singles, not waterlogged by association.
+  assert.equal(play("@CK..", ["right"]), ".@LAA");
+  // Unless a wall piles every one of those blocks onto that same wet cell instead:
+  // then all three do touch it, and it grows wet the whole way (N).
+  assert.equal(play("@CK#", ["right"]), ".@N#");
+});
+
+test("a stack's blocks are all wet or all dry, so a toppled wet stack lands wet blocks on everything", () => {
+  // Height-4 wet stack (N) toppling over depth-2 lava, floor, a dry stack (C) and floor:
+  // the lava is fully solidified and every block it lands on comes down wet.
+  assert.equal(play("@Nb.C.", ["right"]), ".@.KNK");
+});
+
+test("infinite lava swallows a waterlogged block just like a dry one", () => {
+  assert.equal(play("@K~", ["right"]), ".@~");
+});
+
+test("formatLevel rejects a stack taller than a letter can hold", () => {
+  const tall = parseLevel("@J.");
+  tall.cells[2] = 11;
+  assert.throws(() => formatLevel(tall), /more than the 10 a stack's letter can hold/);
+});
+
 test("push previews put lost blocks on the infinite lava cell that swallows them", () => {
   const previews = previewPushes(parseLevel("~~~~~\n~@B.~\n~~~~~"));
   assert.deepEqual(previews[0].landings, [

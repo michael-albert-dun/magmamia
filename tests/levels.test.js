@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { parseLevel, hasClosedBorder } = require("../src/engine.js");
-const { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_ROUND_1, DANCEFLOOR_CANDIDATES } = require("../src/levels.js");
+const { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_ROUND_1, DANCEFLOOR_ROUND_2, DANCEFLOOR_CANDIDATES, MUD_ROUND_1, MUD_ROUND_2 } = require("../src/levels.js");
 const { analyse } = require("../src/solver.js");
 const { solve } = require("./solve.js");
 
@@ -37,7 +37,7 @@ CURATED_LEVELS.forEach((level, index) => {
 
 // The dancefloor candidates being tried out: each must be a real "Clear the
 // dancefloor" level (closed border, solvable) so a bad one never wastes a playtest.
-const DANCEFLOOR_SETS = { "round 1": DANCEFLOOR_ROUND_1, "latest round": DANCEFLOOR_CANDIDATES };
+const DANCEFLOOR_SETS = { "round 1": DANCEFLOOR_ROUND_1, "round 2": DANCEFLOOR_ROUND_2, "latest round": DANCEFLOOR_CANDIDATES };
 for (const [name, levels] of Object.entries(DANCEFLOOR_SETS)) {
   levels.forEach((level, index) => {
     test(`dancefloor candidate ${index + 1} (${name}) is closed, marked "all", and solvable`, () => {
@@ -48,6 +48,44 @@ for (const [name, levels] of Object.entries(DANCEFLOOR_SETS)) {
       assert.equal(result.truncated, false);
       assert.equal(result.solvable, true);
       assert.ok(result.pushes >= 1);
+    });
+  });
+}
+
+// "There will be mud": each level must be solvable, and essentially wet -- replacing
+// every waterlogged stack (K-T) with the matching dry letter (A-J, same height) must
+// make it unsolvable, or the mud isn't doing any real work.
+function dried(text) {
+  return text.replace(/[K-T]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 10));
+}
+const MUD_SETS = { "mud round 1": MUD_ROUND_1, "mud round 2": MUD_ROUND_2 };
+for (const [name, levels] of Object.entries(MUD_SETS)) {
+  levels.forEach((level, index) => {
+    test(`${name} level ${index + 1} is closed and solvable`, () => {
+      const start = parseLevel(level.text);
+      assert.equal(hasClosedBorder(start), true);
+      const result = analyse(start, { objective: "reach", maxStates: 400000, full: false });
+      assert.equal(result.truncated, false);
+      assert.equal(result.solvable, true);
+    });
+
+    test(`${name} level ${index + 1} is unsolvable with every waterlogged stack made dry`, () => {
+      const result = analyse(parseLevel(dried(level.text)), { objective: "reach", maxStates: 400000, full: false });
+      assert.equal(result.truncated, false);
+      assert.equal(result.solvable, false);
+    });
+  });
+}
+
+// Each playable level's `optimum` (the par shown when it is solved) must be the
+// solver's fewest pushes, so a level edit that changes the puzzle can't leave a stale one.
+const PLAYABLE_SETS = { curated: CURATED_LEVELS, "dancefloor round 1": DANCEFLOOR_ROUND_1, "dancefloor round 2": DANCEFLOOR_ROUND_2, "dancefloor latest": DANCEFLOOR_CANDIDATES, "mud round 1": MUD_ROUND_1, "mud round 2": MUD_ROUND_2 };
+for (const [name, levels] of Object.entries(PLAYABLE_SETS)) {
+  levels.forEach((level, index) => {
+    test(`${name} level ${index + 1} has the right optimum`, () => {
+      const result = analyse(parseLevel(level.text), { objective: level.objective || "reach", maxStates: 2000000, full: false });
+      assert.equal(result.truncated, false);
+      assert.equal(level.optimum, result.pushes);
     });
   });
 }

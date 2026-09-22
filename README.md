@@ -137,6 +137,18 @@ on two rounds of candidates; the tight, lava-heavy ones were the interesting one
   route, make blocks have to be manoeuvred round obstacles first.
 - **No obvious chores**, such as a stack whose only possible push throws it into
   infinite lava.
+- **Casual, not hard.** Round 2 was "much nicer, still not hard", and Michael now thinks
+  of this mode as casual/easy: you can strive for the optimum number of pushes, but the
+  real experience is the tidying up. Most levels should be easy; a few harder ones are
+  welcome (round 2's 11 and 12 were the ones that felt genuinely harder).
+- **No stack with a unique available push**, particularly one in the clear (its pushing
+  cell walkable from the start, so nothing has to be done first). It is a chore, not a
+  choice. `forcedPushStacks` in `src/solver.js` finds them (`trivialDisposalStacks` is
+  the special case that throws into infinite lava), and the candidate generator rejects
+  them (`--max-forced-clear`, default 0; `--max-forced`, default 2). Round 2's level 11,
+  the hardest, had none.
+- **A nice trick makes a level.** Round 2's level 8 ends with moving the 1 round the
+  block.
 - **An idea to build:** an "overfill pocket". Two depth-1 lava cells in a column with
   the lower one walled in on the other three sides, and a 3-stack above: pushing the
   3 straight down overfills the pocket and strands a block there for good, so the
@@ -158,12 +170,14 @@ input.
 | `#` | wall |
 | `~` | infinite lava |
 | `a` to `z` | lava of depth 1 to 26 |
-| `A` to `Z` | stack of height 1 to 26 |
+| `A` to `J` | dry stack, height 1 to 10 |
+| `K` to `T` | waterlogged stack, height 1 to 10 (see "Waterlogged blocks" below) |
 | `@` | the player, standing on floor |
 
-So `a` is depth-1 lava and `C` is a stack of height 3. Depths and heights are
-capped at 26. The worked example above is the row `@Eba.#` before the push and
-`.@a.C#` after it.
+So `a` is depth-1 lava and `C` is a dry stack of height 3. Lava depth is capped
+at 26; a stack's height (dry or wet) is capped at 10, since dry and wet share
+the alphabet instead of each getting the full A-Z. The worked example above is
+the row `@Eba.#` before the push and `.@a.C#` after it.
 
 A goal cell is written as its ordinary character followed by `*`. So `.*` is a
 bare goal, `a*` is a goal on depth-1 lava, `C*` is a goal under a stack of height
@@ -187,11 +201,85 @@ game's L-shaped corner puzzle is:
 The box `A` is stuck in the corner, but pushing it right sends it into the
 infinite lava, which clears the way to the goal.
 
+## Waterlogged blocks ("There will be mud")
+
+A refinement of a potion idea (see "To think about" below): a waterlogged (wet, or
+"muddy") block behaves like an ordinary one except:
+
+- Landing on lava, it solidifies the lava outright, however deep, using up just the
+  one block. (Infinite lava still can't be cleared; a wet block lands there is lost
+  the same as a dry one.)
+- Touching another block waterlogs it too. Touch means "lands on top of": a toppled
+  wet stack that adds one block to a dry stack makes the whole thing wet -- and the
+  reverse also holds, a dry block landing on an already-wet stack doesn't wash it
+  clean. But touch is judged per landing cell, not per push: when a stack spreads
+  across several cells, only the ones that actually land on a wet stack are
+  affected. A dry stack pushed across an existing wet single and two bare cells
+  waterlogs only the one it lands on; the other two are ordinary dry singles, not
+  waterlogged by association with the rest of their own push. A wall pile is the
+  exception that proves the rule: if every one of those blocks piles onto that same
+  wet cell instead (because a wall stops the line short), they all do touch it, and
+  it stays wet.
+- A stack is all wet or all dry, never mixed, so this is one bit per stack (per
+  cell, really, since a stack lives at one cell at a time), not per block.
+
+In the level text (see "Level format" above) `K` to `T` are wet stacks, height 1 to
+10, alongside `A` to `J` for dry ones. `src/solver.js`'s exact search treats a wet
+stack as a different state from a dry one of the same height, since it behaves
+differently under a later push.
+
+Levels are all "Seize the crown". Each is essential: with every `K`-`T` in its text
+turned back into the matching dry letter (same height, no wetness), the level becomes
+unsolvable, which `tests/levels.test.js` checks directly rather than trusting it by
+eye. Round 1 (`?set=mud1`) is four hand-built levels demonstrating the mechanic
+plainly, including the "touch" rule: a wet block one or two short of a multi-cell
+trench has to merge with a dry stack first to reach the height that bridges it in one
+push. Round 2 (`?set=mud`, the latest) was found rather than hand-built (see "Finding
+levels" below) and leans harder on that: several of them need the wet stack to grow
+before it's used, not just deployed on the nearest lava. Kept mostly dry either way,
+in line with the other games' habit of one new mechanic at a time: a level's mud is
+one or two small stacks, not a pile of them.
+
+**Making mud essential by construction, not by patching a finished puzzle.** The
+first attempt at a generator built an ordinary dry level, then deepened a lava cell
+afterwards and hoped the result needed mud; it usually didn't, since the rest of a
+rich level typically has its own way to the goal that the deepened cell was never on.
+The working version instead makes mud part of the same construction and search that
+made the curated levels (see "Finding levels"): `src/generator.js`'s `buildByReversal`
+gained a third reverse-step kind, "soak" (alongside "uncover" and "transport"): where
+forward play has a wet block solidify a lava cell of any depth in one go, reversed
+that depth could have been anything, so a soak step hands its lava cell an arbitrary,
+dry-unmanageable depth and marks the stack put back there wet. `experiments/
+mud-candidates.js` seeds its search two ways -- with a soak step already in the
+reversal, or by taking a plain dry build, converting one of its stacks to wet, deepening
+a lava cell, and removing another stack it would otherwise still need -- then hill
+climbs exactly as `find-levels.js` does, except mutation can also toggle a stack's
+wetness, and every candidate the climb considers (not just the one it settles on) is
+checked essential on the spot. Even so, a soak-built level isn't essential merely by
+containing one: the rest of the build can still supply an unrelated dry route to the
+goal, so the check has to run on the whole finished level, which is what makes the
+continuous, not-just-at-the-end, checking matter. One more finding from that search:
+mud levels ran with far more slack (spare, unused blocks) than the curated levels'
+tuning assumes, apparently because the ordinary dry stacks a build leaves lying around
+often go unused once the wet trick solves things efficiently; shrinking each dry stack
+down to the smallest height that keeps the level solvable and essential (done once a
+candidate otherwise passes) brought it back down without giving up on the level.
+
+Visually a wet stack is the same sandy material, darkened like wet sand
+(`--stack-wet` in `styles.css`), rather than a different colour; the brown/red
+colourblind question is deferred until the mechanic itself settles. A separate,
+unbuilt idea: draw infinite lava as a swirly galaxy/vortex rather than plain red,
+since "abyss" (the engine's own name for it, `state.abyss`) is closer to how it
+now reads than "infinite lava".
+
 ## Levels
 
 Levels will be generated with a solver, and probably also handmade, so there'll
-be a mix. Whether to score a level against a par or against what the player has
-achieved is *(open)*.
+be a mix. Each playable level carries an `optimum`: the fewest pushes that solve it, from the exact
+solver. The game counts pushes as well as moves (walking is free, so steps say nothing
+about tidiness) and on solving compares them with the optimum. This is a par to strive
+for, not a score to chase; comparing against what other players achieved is *(open)*.
+`tests/levels.test.js` checks each `optimum` against the solver.
 
 The board is bigger than in the other games, since interesting levels need room.
 Either it scrolls on a phone, or the game is desktop-only. A default around 8
@@ -209,17 +297,6 @@ Possible rules for winning:
   encode the order, which the plain `*` marker doesn't do.
 - Potentially also variant goals, e.g., potions that allow you to stand on 
   a piece of lava (either just once, or converting it to floor)
-
-**Waterlogged blocks.** A refinement of the potion idea above. A waterlogged block
-has two properties:
-
-- When it lands on lava, the lava solidifies, however deep it is (but not infinite
-  lava, which can't be cleared).
-- When it touches other blocks, they become waterlogged too.
-- Stacks of blocks are either all waterlogged or not.
-- Touch means "lands on top of" (so a toppled waterlogged stack that adds one block to a dry stack makes it waterlogged)
-- Waterlogged blocks are still used up when solidifying lava.
-
 
 How "reached" interacts with goals that get covered by blocks or that are on lava
 would also need deciding: for the "all of them" rules, does a goal have to be
@@ -242,15 +319,16 @@ http://127.0.0.1:4176/
 The app is plain HTML, CSS, and JavaScript. There is no build step, and it fetches
 no data files, so opening `index.html` directly also works.
 
-To try the "Clear the dancefloor" candidates being playtested, add `?set=dancefloor` to
-the address (the latest round) or `?set=dancefloor1` (round 1). Each set keeps its own
-saved progress.
-
-`index.html` is the game: a short set of curated "reach the crown" levels, a level
-picker (solved levels are remembered in the browser), undo, restart, and a
-collapsed how-to-play. `bench.html` is the rules test bench: type in any level,
-pick the objective, and try things out. Controls are the arrow keys or WASD (Z to
-undo, R to restart), the on-screen arrows, or clicking a cell next to the player.
+`index.html` opens on a home screen listing every set of levels (the curated game,
+each round of "Clear the dancefloor", "There will be mud"); picking one opens a
+level-select grid for it, and picking a level opens the board. `?set=dancefloor`,
+`?set=dancefloor2`, `?set=dancefloor1` and `?set=mud1` link straight to a
+non-default set's level-select grid (`?set=dancefloor` and `?set=mud` are each
+round's latest, and also what the bare set names mean); each set remembers its own
+solved levels. Undo, restart and a collapsed how-to-play are on the board itself.
+`bench.html` is the separate rules test bench: type in any level, pick the
+objective, and try things out. Controls are the arrow keys or WASD (Z to undo, R to
+restart), the on-screen arrows, or clicking a cell next to the player.
 
 ## Files
 
@@ -260,10 +338,14 @@ undo, R to restart), the on-screen arrows, or clicking a cell next to the player
   levels"). Also loadable from Node.
 - `src/levels.js`: the test bench presets and the curated levels for the game.
 - `src/render.js`: board drawing shared by both pages.
+- `src/generator.js`: builds a level by running the game backwards (see "Finding
+  levels"). Also loadable from Node.
 - `src/play.js`, `index.html`: the game. `src/bench.js`, `bench.html`: the bench.
 - `styles.css`: styles for both pages.
-- `experiments/find-levels.js`: the level search. `experiments/results/`: what its
-  runs have found.
+- `experiments/find-levels.js`: the curated-level search. `experiments/
+  dancefloor-candidates.js`, `experiments/mud-candidates.js`: the "Clear the
+  dancefloor" and "There will be mud" candidate searches. `experiments/results/`:
+  what runs of these have found.
 - `tests/`: run with `node --test tests/`. `tests/solve.js` is a separate
   step-by-step breadth-first solver, used as an independent check on the
   push-level solver.

@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { parseLevel, move, isWon } = require("../src/engine.js");
-const { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, regionOf } = require("../src/solver.js");
+const { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, forcedPushStacks, regionOf } = require("../src/solver.js");
 const { PRESET_LEVELS } = require("../src/levels.js");
 const { solve } = require("./solve.js");
 
@@ -112,6 +112,13 @@ test("solution events", () => {
   // The block covers the goal, and is then pushed off the edge to uncover it.
   const covered = parseLevel("@A.*");
   assert.deepEqual([...solutionEvents(covered, analyse(covered).path)].sort(), ["cover", "edge"]);
+});
+
+test("soak: a waterlogged block landing on a dry stack is flagged, landing on floor or an already-wet stack is not", () => {
+  const push = [{ from: 0, dir: "right" }]; // Player at cell 0 pushes the stack at cell 1.
+  assert.ok(solutionEvents(parseLevel("@KA."), push).has("soak"), "a dry stack turning wet is a soak");
+  assert.ok(!solutionEvents(parseLevel("@K.."), push).has("soak"), "landing on bare floor isn't a soak");
+  assert.ok(!solutionEvents(parseLevel("@KK."), push).has("soak"), "landing on an already-wet stack isn't a soak");
 });
 
 test("shuffle: merge two singles into a 2, then push it to lay two singles again", () => {
@@ -235,3 +242,12 @@ for (const objective of ["reach", "lava", "all"]) {
     assert.ok(truncated < 30, `too many truncated samples (${truncated})`);
   });
 }
+
+test("forcedPushStacks finds single-direction stacks and whether the push is in the clear", () => {
+  // Infinite lava behind a stack rules out pushing it that way, leaving one direction.
+  assert.deepEqual(forcedPushStacks(parseLevel("#####\n#@A~#\n#####")).map((f) => [f.cell, f.name, f.clear]), [[7, "right", true]]);
+  // Walled off from the player, the same push is not in the clear.
+  assert.deepEqual(forcedPushStacks(parseLevel("#######\n#@#.A~#\n#######")).map((f) => [f.cell, f.name, f.clear]), [[11, "right", false]]);
+  // A stack in open floor has several pushes, so it isn't forced.
+  assert.deepEqual(forcedPushStacks(parseLevel(".....\n.@A..\n.....")), []);
+});

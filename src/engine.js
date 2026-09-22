@@ -2,7 +2,7 @@
 // game (src/play.js), the test bench (src/bench.js) and by tests/experiments run
 // directly in Node, so all of them always agree on what the rules are. See README.md for the design.
 //
-// A state is { rows, cols, cells, walls, abyss, goals, player }:
+// A state is { rows, cols, cells, walls, abyss, goals, wet, player }:
 //   cells   signed height per cell: > 0 is a stack, < 0 is lava (depth is the
 //           absolute value), 0 is floor. Walls and abyss cells hold 0 here too.
 //   walls   0/1 per cell. Static, shared between states.
@@ -14,6 +14,10 @@
 //   goals   0/1 per cell. Static, shared between states. A goal is a marker
 //           on the cell, not a cell state, so it is untouched by anything that
 //           happens to the cell's contents.
+//   wet     0/1 per cell, meaningful only where cells[i] > 0: whether that
+//           stack is waterlogged ("There will be mud"; see README). A stack is
+//           all wet or all dry, never mixed, so this is one bit per cell, not
+//           per block.
 //   player  cell index (row * cols + col).
 // States are never mutated: move() returns a new one, which makes undo trivial.
 
@@ -24,7 +28,10 @@ const DIRECTIONS = {
   right: { dx: 1, dy: 0, label: "right" }
 };
 
-const MAX_LEVEL_HEIGHT = 26; // The text format has one letter per height/depth.
+const MAX_LEVEL_HEIGHT = 26; // Lava depth: the text format has one letter (a-z) per depth.
+// A stack's letter also has to say whether it's wet, so dry (A-J) and wet (K-T) share
+// the alphabet instead of each getting the full A-Z; this is the cap on height either way.
+const MAX_STACK_HEIGHT = 10;
 
 // The kinds of objective a level can have (see README, "Objective").
 const OBJECTIVES = {
@@ -46,6 +53,7 @@ function parseLevel(text) {
   const walls = [];
   const abyss = [];
   const goals = [];
+  const wet = [];
   let player = -1;
 
   lines.forEach((line, y) => {
@@ -58,6 +66,7 @@ function parseLevel(text) {
       let value = 0;
       let wall = 0;
       let deep = 0;
+      let soggy = 0;
       if (ch === ".") {
         value = 0;
       } else if (ch === "#") {
@@ -71,8 +80,11 @@ function parseLevel(text) {
         player = cells.length;
       } else if (ch >= "a" && ch <= "z") {
         value = -(ch.charCodeAt(0) - 96);
-      } else if (ch >= "A" && ch <= "Z") {
-        value = ch.charCodeAt(0) - 64;
+      } else if (ch >= "A" && ch <= "J") {
+        value = ch.charCodeAt(0) - 64; // A-J: dry stacks, height 1-10.
+      } else if (ch >= "K" && ch <= "T") {
+        value = ch.charCodeAt(0) - 74; // K-T: waterlogged stacks, height 1-10.
+        soggy = 1;
       } else {
         throw new Error(`Unexpected "${ch}" (${where}).`);
       }
@@ -80,13 +92,23 @@ function parseLevel(text) {
       walls.push(wall);
       abyss.push(deep);
       goals.push(goal ? 1 : 0);
+      wet.push(soggy);
     }
     if (cols === null) cols = x;
     else if (x !== cols) throw new Error(`Row ${y + 1} has ${x} cells but row 1 has ${cols}.`);
   });
 
   if (player < 0) throw new Error("The level has no player (@).");
-  return { rows, cols, cells: Int16Array.from(cells), walls: Uint8Array.from(walls), abyss: Uint8Array.from(abyss), goals: Uint8Array.from(goals), player };
+  return {
+    rows,
+    cols,
+    cells: Int16Array.from(cells),
+    walls: Uint8Array.from(walls),
+    abyss: Uint8Array.from(abyss),
+    goals: Uint8Array.from(goals),
+    wet: Uint8Array.from(wet),
+    player
+  };
 }
 
 function formatLevel(state) {
@@ -96,13 +118,16 @@ function formatLevel(state) {
     for (let x = 0; x < state.cols; x += 1) {
       const i = y * state.cols + x;
       const value = state.cells[i];
-      if (Math.abs(value) > MAX_LEVEL_HEIGHT) {
-        throw new RangeError(`Cell ${i} has height ${value}, more than the ${MAX_LEVEL_HEIGHT} the text format can hold.`);
+      if (value < 0 && -value > MAX_LEVEL_HEIGHT) {
+        throw new RangeError(`Cell ${i} has lava depth ${-value}, more than the ${MAX_LEVEL_HEIGHT} the text format can hold.`);
+      }
+      if (value > MAX_STACK_HEIGHT) {
+        throw new RangeError(`Cell ${i} has height ${value}, more than the ${MAX_STACK_HEIGHT} a stack's letter can hold (A-J dry, K-T waterlogged).`);
       }
       if (state.walls[i]) line += "#";
       else if (isAbyss(state, i)) line += "~";
       else if (i === state.player) line += "@";
-      else if (value > 0) line += String.fromCharCode(64 + value);
+      else if (value > 0) line += String.fromCharCode((state.wet && state.wet[i] ? 74 : 64) + value);
       else if (value < 0) line += String.fromCharCode(96 - value);
       else line += ".";
       if (state.goals[i]) line += "*";
@@ -165,12 +190,15 @@ function move(state, directionName, options = {}) {
 
 // The player has moved into the stack at `target` (column nx, row ny), pushing
 // in direction (dx, dy). A stack of height h lays one block on each of the next
-// h cells in that direction. Landing a block is just adding 1 to the cell's
+// h cells in that direction. Landing a dry block is just adding 1 to the cell's
 // signed height, which covers every case at once: lava gets 1 shallower (and at
 // depth 0 is floor, the block used up), floor becomes a stack of 1, and a stack
-// gets 1 taller without toppling itself.
+// gets 1 taller without toppling itself. A waterlogged block instead solidifies
+// lava outright, however deep (see README, "There will be mud"), and makes
+// whatever it lands on waterlogged in turn.
 function pushStack(state, target, nx, ny, dx, dy) {
   const height = state.cells[target];
+  const sourceWet = Boolean(state.wet && state.wet[target]);
   const beyondX = nx + dx;
   const beyondY = ny + dy;
   if (inBounds(state, beyondX, beyondY) && state.walls[beyondY * state.cols + beyondX]) {
@@ -178,7 +206,9 @@ function pushStack(state, target, nx, ny, dx, dy) {
   }
 
   const cells = state.cells.slice();
+  const wet = state.wet ? state.wet.slice() : new Uint8Array(cells.length);
   cells[target] = 0;
+  wet[target] = 0;
   // Per block: the cell index it landed on, or -1 if it fell off the grid. A
   // block landing on an abyss cell is lost too, but its index is still reported.
   const drops = [];
@@ -206,9 +236,17 @@ function pushStack(state, target, nx, ny, dx, dy) {
       }
     }
     drops.push(landing);
-    if (landing >= 0 && !isAbyss(state, landing)) cells[landing] += 1;
+    if (landing >= 0 && !isAbyss(state, landing)) {
+      const wasStack = cells[landing] > 0;
+      const existingWet = wasStack && wet[landing] === 1;
+      if (sourceWet && cells[landing] < 0) cells[landing] = 0; // mud fills lava outright, any depth, one block used up.
+      else cells[landing] += 1;
+      // Touching a waterlogged block waterlogs the rest of the stack (README); once
+      // wet, a stack stays wet however much dry material later lands on it too.
+      if (cells[landing] > 0) wet[landing] = existingWet || sourceWet ? 1 : 0;
+    }
   }
-  return { result: "pushed", state: { ...state, cells, player: target }, height, drops };
+  return { result: "pushed", state: { ...state, cells, wet, player: target }, height, drops };
 }
 
 // For each stack the player could push right now, where its blocks would land,
@@ -259,5 +297,5 @@ function isWon(state, objective) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { DIRECTIONS, OBJECTIVES, MAX_LEVEL_HEIGHT, parseLevel, formatLevel, hasClosedBorder, move, previewPushes, isWon };
+  module.exports = { DIRECTIONS, OBJECTIVES, MAX_LEVEL_HEIGHT, MAX_STACK_HEIGHT, parseLevel, formatLevel, hasClosedBorder, move, previewPushes, isWon };
 }

@@ -1,8 +1,9 @@
-// The player-facing game: a level picker, the board, undo and restart. The
-// rules (move, previewPushes, isWon, ...) are in engine.js, the levels
-// (CURATED_LEVELS, or one of the dancefloor sets) in levels.js and the board drawing
-// (drawBoard, CELL) in render.js, all loaded before this file. bench.html is the
-// developer's test bench, this is the game.
+// The player-facing game: three screens, switched by state.view -- a home screen
+// listing the sets of levels, a level-select grid within whichever set was chosen (or
+// linked to with ?set=), and the board itself. The rules (move, previewPushes, isWon,
+// ...) are in engine.js, the levels in levels.js and the board drawing (drawBoard,
+// CELL) in render.js, all loaded before this file. bench.html is the developer's test
+// bench, this is the game.
 const KEY_DIRECTIONS = {
   ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
   w: "up", s: "down", a: "left", d: "right",
@@ -23,53 +24,83 @@ const REFUSAL_TEXT = {
 };
 
 // What the how-to-play says first, by objective. A level's objective is
-// `objective` in its CURATED_LEVELS entry ("reach" if it has none).
+// `objective` in its level-list entry ("reach" if it has none).
 const OBJECTIVE_HELP = {
   reach: "Seize the crown! Reach it to win the level.",
   lava: "Fill in all the lava. Blocks left over don't matter.",
   all: "Clear the dancefloor! Get rid of every bit of lava and every block. A block can only be removed by pushing it into infinite lava."
 };
 
-// Which list of levels to play: the game's own, or one of the "Clear the dancefloor"
-// candidate sets being tried out (?set=dancefloor for the latest round, ?set=dancefloor1
-// for round 1). Each set keeps its own saved progress.
-const LEVEL_SETS = {
-  dancefloor: { levels: DANCEFLOOR_CANDIDATES, key: "magmamia.solved.dancefloor2.v1", title: "dancefloor candidates" },
-  dancefloor1: { levels: DANCEFLOOR_ROUND_1, key: "magmamia.solved.dancefloor.v1", title: "dancefloor candidates, round 1" }
+// Every set of levels the game offers, keyed by the URL's `?set=` (the curated set is
+// "crown", also what a bare URL with no `?set=` opens straight into, for links from
+// before there was a home screen). Each keeps its own saved progress.
+const ALL_SETS = {
+  crown: { levels: CURATED_LEVELS, key: "magmamia.solved.v1", title: "Seize the Crown", blurb: "The core game: reach the crown." },
+  dancefloor: { levels: DANCEFLOOR_CANDIDATES, key: "magmamia.solved.dancefloor3.v1", title: "Clear the Dancefloor", blurb: "Candidates, latest round: get rid of every bit of lava and every block." },
+  dancefloor2: { levels: DANCEFLOOR_ROUND_2, key: "magmamia.solved.dancefloor2.v1", title: "Clear the Dancefloor (round 2)", blurb: "Clear the dancefloor candidates, an earlier round." },
+  dancefloor1: { levels: DANCEFLOOR_ROUND_1, key: "magmamia.solved.dancefloor.v1", title: "Clear the Dancefloor (round 1)", blurb: "Clear the dancefloor candidates, the first round." },
+  mud: { levels: MUD_ROUND_2, key: "magmamia.solved.mud2.v1", title: "There will be mud", blurb: "Seize the crown, with waterlogged blocks in the mix." },
+  mud1: { levels: MUD_ROUND_1, key: "magmamia.solved.mud.v1", title: "There will be mud (round 1)", blurb: "There will be mud, the first, hand-built round." }
 };
+// The order sets are listed on the home screen.
+const SET_ORDER = ["crown", "dancefloor", "dancefloor2", "dancefloor1", "mud", "mud1"];
 
-function requestedSet() {
+function requestedSetKey() {
   try {
-    return LEVEL_SETS[new URLSearchParams(window.location.search).get("set")] || null;
+    const key = new URLSearchParams(window.location.search).get("set");
+    return key && ALL_SETS[key] ? key : null;
   } catch {
     return null;
   }
 }
-const CANDIDATE_SET = requestedSet();
-const LEVELS = CANDIDATE_SET ? CANDIDATE_SET.levels : CURATED_LEVELS;
 
-const SOLVED_KEY = CANDIDATE_SET ? CANDIDATE_SET.key : "magmamia.solved.v1";
 const GENTLE_KEY = "magmamia.gentle.v1";
 const PREVIEW_KEY = "magmamia.preview.v1";
 
 const state = {
+  view: "home", // "home" (pick a set), "levels" (pick a level within one) or "play".
+  setKey: null, // Which of ALL_SETS is open, or null on the home screen.
   levelIndex: 0,
   initial: null,
   current: null,
   history: [], // Every earlier state, oldest first; its length is the move count.
+  pushCounts: [], // Parallel to history: how many pushes had been made at each of those states.
+  pushes: 0, // Pushes so far. The level's `optimum` is the fewest pushes that solve it.
   message: "",
   messageKind: "",
-  solved: new Set(), // Indexes of levels solved so far, remembered between visits.
+  solved: new Set(), // Indexes solved so far in the open set, remembered between visits.
   gentle: false, // Refuse lava moves instead of dying.
   preview: false // Tag the cells a push would drop blocks on. Opt-in, off by default.
 };
 
+function currentSet() {
+  return state.setKey ? ALL_SETS[state.setKey] : null;
+}
+function currentLevels() {
+  const set = currentSet();
+  return set ? set.levels : [];
+}
+function firstUnsolvedLevel() {
+  const levels = currentLevels();
+  const index = levels.findIndex((_, i) => !state.solved.has(i));
+  return index >= 0 ? index : 0;
+}
+
 const elements = {
+  homeScreen: document.querySelector("#home-screen"),
+  modeList: document.querySelector("#mode-list"),
+  levelsScreen: document.querySelector("#levels-screen"),
+  levelsHomeButton: document.querySelector("#levels-home-button"),
+  levelsContinueButton: document.querySelector("#levels-continue-button"),
+  levelsTitle: document.querySelector("#levels-title"),
+  levelsSubtitle: document.querySelector("#levels-subtitle"),
+  levelsGrid: document.querySelector("#levels-grid"),
+  playScreen: document.querySelector("#play-screen"),
+  playLevelsButton: document.querySelector("#play-levels-button"),
   infoButton: document.querySelector("#info-button"),
   infoPanel: document.querySelector("#info-panel"),
   gentle: document.querySelector("#gentle-lava"),
   preview: document.querySelector("#show-preview"),
-  levelNav: document.querySelector("#level-nav"),
   board: document.querySelector("#board"),
   status: document.querySelector("#status"),
   undo: document.querySelector("#undo-button"),
@@ -80,7 +111,6 @@ const elements = {
   title: document.querySelector("#game-title")
 };
 
-if (CANDIDATE_SET) elements.title.textContent = `Magma Mia! \u2014 ${CANDIDATE_SET.title}`;
 loadPreferences();
 elements.gentle.checked = state.gentle;
 elements.preview.checked = state.preview;
@@ -101,25 +131,61 @@ for (const button of elements.dpadButtons) {
   button.addEventListener("click", () => attemptMove(button.dataset.dir));
 }
 elements.board.addEventListener("click", handleBoardClick);
+elements.levelsHomeButton.addEventListener("click", goHome);
+elements.levelsContinueButton.addEventListener("click", () => startLevel(firstUnsolvedLevel()));
+elements.playLevelsButton.addEventListener("click", () => openLevels(state.setKey));
 document.addEventListener("keydown", handleKeyDown);
 
-startLevel(firstUnsolvedLevel());
+const requestedKey = requestedSetKey();
+if (requestedKey) openLevels(requestedKey);
+else goHome();
 
-function firstUnsolvedLevel() {
-  const index = LEVELS.findIndex((_, i) => !state.solved.has(i));
-  return index >= 0 ? index : 0;
+// --- Moving between the three screens ---------------------------------------
+
+function goHome() {
+  state.view = "home";
+  state.setKey = null;
+  render();
 }
 
+function openLevels(key) {
+  state.setKey = key;
+  state.view = "levels";
+  loadSetPreferences();
+  render();
+}
+
+// --- Preferences: two global display settings, plus each set's own solved list --
+
 // Browser storage may be missing or blocked, so every use is wrapped: the game
-// works the same without it, it just forgets progress.
+// works the same without it, it just forgets progress and settings.
 function loadPreferences() {
   try {
-    const solved = JSON.parse(window.localStorage.getItem(SOLVED_KEY) || "[]");
-    if (Array.isArray(solved)) solved.forEach((i) => Number.isInteger(i) && state.solved.add(i));
     state.gentle = window.localStorage.getItem(GENTLE_KEY) === "1";
     state.preview = window.localStorage.getItem(PREVIEW_KEY) === "1"; // Off unless turned on.
   } catch {
-    /* No saved progress. */
+    /* No saved preferences. */
+  }
+}
+
+function loadSetPreferences() {
+  state.solved = new Set();
+  try {
+    const solved = JSON.parse(window.localStorage.getItem(currentSet().key) || "[]");
+    if (Array.isArray(solved)) solved.forEach((i) => Number.isInteger(i) && state.solved.add(i));
+  } catch {
+    /* No saved progress for this set. */
+  }
+}
+
+// A set's solved count read straight from storage, so the home screen can show every
+// set's progress without having to open each one first.
+function solvedCountFor(key) {
+  try {
+    const solved = JSON.parse(window.localStorage.getItem(ALL_SETS[key].key) || "[]");
+    return Array.isArray(solved) ? solved.length : 0;
+  } catch {
+    return 0;
   }
 }
 
@@ -137,12 +203,15 @@ function toggleInfo() {
   elements.infoButton.setAttribute("aria-expanded", String(open));
 }
 
+// --- Playing a level ---------------------------------------------------------
+
 function startLevel(index) {
-  if (index < 0 || index >= LEVELS.length) return;
+  const levels = currentLevels();
+  if (index < 0 || index >= levels.length) return;
+  state.view = "play";
   state.levelIndex = index;
-  state.initial = parseLevel(LEVELS[index].text);
-  state.current = state.initial;
-  state.history = [];
+  state.initial = parseLevel(levels[index].text);
+  resetHistory();
   setMessage("", "");
   render();
 }
@@ -153,7 +222,7 @@ function setMessage(text, kind) {
 }
 
 function objectiveOf(levelIndex) {
-  return LEVELS[levelIndex].objective || "reach";
+  return currentLevels()[levelIndex].objective || "reach";
 }
 
 function isSolved() {
@@ -165,18 +234,19 @@ function attemptMove(directionName) {
   const outcome = move(state.current, directionName, { lavaFatal: !state.gentle });
   if (outcome.result === "moved" || outcome.result === "pushed") {
     state.history.push(state.current);
+    state.pushCounts.push(state.pushes);
+    if (outcome.result === "pushed") state.pushes += 1;
     state.current = outcome.state;
     setMessage("", "");
     if (isSolved()) {
       state.solved.add(state.levelIndex);
-      savePreference(SOLVED_KEY, JSON.stringify([...state.solved]));
+      savePreference(currentSet().key, JSON.stringify([...state.solved]));
     }
   } else if (outcome.result === "refused") {
     setMessage(REFUSAL_TEXT[outcome.reason], "");
   } else {
     // Died: the level restarts, and with it the move count and undo history.
-    state.current = state.initial;
-    state.history = [];
+    resetHistory();
     setMessage(DEATH_TEXT[outcome.reason], "died");
   }
   render();
@@ -185,13 +255,20 @@ function attemptMove(directionName) {
 function undo() {
   if (state.history.length === 0) return;
   state.current = state.history.pop();
+  state.pushes = state.pushCounts.pop();
   setMessage("", "");
   render();
 }
 
-function restart() {
+function resetHistory() {
   state.current = state.initial;
   state.history = [];
+  state.pushCounts = [];
+  state.pushes = 0;
+}
+
+function restart() {
+  resetHistory();
   setMessage("", "");
   render();
 }
@@ -200,6 +277,7 @@ function handleKeyDown(event) {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   const tag = event.target.tagName;
   if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+  if (state.view !== "play") return;
   const directionName = KEY_DIRECTIONS[event.key];
   if (directionName) {
     event.preventDefault();
@@ -227,42 +305,87 @@ function handleBoardClick(event) {
   attemptMove(directionName);
 }
 
+// --- Rendering ----------------------------------------------------------------
+
 function render() {
-  elements.objectiveHelp.textContent = OBJECTIVE_HELP[objectiveOf(state.levelIndex)];
-  // Tags for where a push from here would drop blocks (see previewPushes).
-  const chips = state.preview && !isSolved() ? previewPushes(state.current).flatMap((push) => push.landings) : [];
-  drawBoard(elements.board, state.current, { chips });
-  renderLevelNav();
-  renderStatus();
-  elements.undo.disabled = state.history.length === 0;
-  elements.next.hidden = !(isSolved() && state.levelIndex + 1 < LEVELS.length);
+  elements.homeScreen.hidden = state.view !== "home";
+  elements.levelsScreen.hidden = state.view !== "levels";
+  elements.playScreen.hidden = state.view !== "play";
+  if (state.view === "home") renderHome();
+  else if (state.view === "levels") renderLevels();
+  else renderPlay();
 }
 
-function renderLevelNav() {
-  elements.levelNav.replaceChildren();
-  LEVELS.forEach((_, index) => {
+function renderHome() {
+  elements.modeList.replaceChildren();
+  for (const key of SET_ORDER) {
+    const set = ALL_SETS[key];
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "mode-card";
+    const title = document.createElement("span");
+    title.className = "mode-title";
+    title.textContent = set.title;
+    const blurb = document.createElement("span");
+    blurb.className = "mode-blurb";
+    blurb.textContent = set.blurb;
+    const progress = document.createElement("span");
+    progress.className = "mode-progress";
+    progress.textContent = `${solvedCountFor(key)}/${set.levels.length} solved`;
+    button.append(title, blurb, progress);
+    button.addEventListener("click", () => openLevels(key));
+    elements.modeList.append(button);
+  }
+}
+
+function renderLevels() {
+  const set = currentSet();
+  elements.levelsTitle.textContent = set.title;
+  elements.levelsSubtitle.textContent = set.blurb;
+  const allSolved = state.solved.size >= set.levels.length;
+  elements.levelsContinueButton.hidden = allSolved;
+  elements.levelsContinueButton.textContent = state.solved.size === 0 ? "Start →" : "Continue →";
+  const next = firstUnsolvedLevel();
+  elements.levelsGrid.replaceChildren();
+  set.levels.forEach((_, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = String(index + 1);
     button.className = "level-button";
-    if (index === state.levelIndex) button.classList.add("is-current");
     if (state.solved.has(index)) button.classList.add("is-solved");
+    if (!allSolved && index === next) button.classList.add("is-current");
     button.setAttribute("aria-label", `Level ${index + 1}${state.solved.has(index) ? ", solved" : ""}`);
-    if (index === state.levelIndex) button.setAttribute("aria-current", "true");
     button.addEventListener("click", () => startLevel(index));
-    elements.levelNav.append(button);
+    elements.levelsGrid.append(button);
   });
+}
+
+function renderPlay() {
+  const set = currentSet();
+  elements.title.textContent = state.setKey === "crown" ? "Magma Mia!" : `Magma Mia! — ${set.title}`;
+  elements.objectiveHelp.textContent = OBJECTIVE_HELP[objectiveOf(state.levelIndex)];
+  // Tags for where a push from here would drop blocks (see previewPushes).
+  const chips = state.preview && !isSolved() ? previewPushes(state.current).flatMap((push) => push.landings) : [];
+  drawBoard(elements.board, state.current, { chips });
+  renderStatus();
+  elements.undo.disabled = state.history.length === 0;
+  elements.next.hidden = !(isSolved() && state.levelIndex + 1 < currentLevels().length);
 }
 
 function renderStatus() {
   const moves = state.history.length;
   elements.status.className = "status";
   if (isSolved()) {
-    const last = state.levelIndex + 1 >= LEVELS.length;
-    elements.status.textContent = `Solved in ${moves} ${moves === 1 ? "move" : "moves"}.${last ? " That's the last level for now." : ""}`;
+    const last = state.levelIndex + 1 >= currentLevels().length;
+    // Pushes are the comparator, not moves: walking is free, so a step count says
+    // nothing about how tidy the solution was.
+    const optimum = currentLevels()[state.levelIndex].optimum;
+    const pushes = `${state.pushes} ${state.pushes === 1 ? "push" : "pushes"}`;
+    const versus = !optimum ? "" : state.pushes <= optimum ? " That's the optimum!" : ` The optimum is ${optimum}.`;
+    elements.status.textContent = `Solved in ${moves} ${moves === 1 ? "move" : "moves"}, ${pushes}.${versus}${last ? " That's the last level for now." : ""}`;
     elements.status.classList.add("is-won");
   } else {
-    const prefix = `Level ${state.levelIndex + 1} · Moves: ${moves}`;
+    const prefix = `Level ${state.levelIndex + 1} · Moves: ${moves} · Pushes: ${state.pushes}`;
     elements.status.textContent = state.message ? `${prefix} · ${state.message}` : prefix;
     if (state.messageKind === "died") elements.status.classList.add("is-died");
   }

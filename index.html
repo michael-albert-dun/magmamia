@@ -6,18 +6,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f1ec">
   <title>Magma Mia!</title>
-  <link rel="stylesheet" href="styles.css?v=20260921v">
-  <script src="src/engine.js?v=20260921v" defer></script>
-  <script src="src/levels.js?v=20260921v" defer></script>
-  <script src="src/render.js?v=20260921v" defer></script>
-  <script src="src/play.js?v=20260921v" defer></script>
+  <link rel="stylesheet" href="styles.css?v=20260922f">
+  <script src="src/engine.js?v=20260922f" defer></script>
+  <script src="src/levels.js?v=20260922f" defer></script>
+  <script src="src/render.js?v=20260922f" defer></script>
+  <script src="src/play.js?v=20260922f" defer></script>
 </head>
 
 <body>
   <main class="app">
-    <section class="play-area game">
+    <!-- Which one of the three sections below is shown is decided by play.js
+         (state.view), toggling `hidden`. Home lists the sets of levels; Levels is
+         the picker for whichever set was chosen (or linked to with ?set=); Play is
+         the board itself. -->
+    <section id="home-screen" class="play-area home" hidden>
       <header class="game-header">
-        <h1 id="game-title">Magma Mia!</h1>
+        <h1>Magma Mia!</h1>
+      </header>
+      <p class="subtitle">Pick a set of levels.</p>
+      <div id="mode-list" class="mode-list"></div>
+    </section>
+
+    <section id="levels-screen" class="play-area levels" hidden>
+      <header class="game-header">
+        <div class="header-left">
+          <button id="levels-home-button" class="text-button" type="button">&larr; Modes</button>
+          <h1 id="levels-title">Levels</h1>
+        </div>
+        <button id="levels-continue-button" class="text-button" type="button" hidden>Continue &rarr;</button>
+      </header>
+      <p id="levels-subtitle" class="subtitle"></p>
+      <div id="levels-grid" class="level-nav levels-grid" aria-label="Levels"></div>
+    </section>
+
+    <section id="play-screen" class="play-area game" hidden>
+      <header class="game-header">
+        <div class="header-left">
+          <button id="play-levels-button" class="text-button" type="button">&larr; Levels</button>
+          <h1 id="game-title">Magma Mia!</h1>
+        </div>
         <button id="info-button" class="icon-button" type="button" aria-label="How to play" aria-expanded="false" aria-controls="info-panel">i</button>
       </header>
 
@@ -27,6 +54,7 @@
           <li>Walk with the arrow keys or WASD, the buttons below, or by tapping a square next to you.</li>
           <li>Walk into a stack of blocks to push it over. It topples away from you and drops one block on each of the next squares in a line, as many as the stack was tall.</li>
           <li>A block dropped on lava makes it one shallower; lava with nothing left is safe floor. Blocks that fall off the edge are lost, and blocks that hit a wall pile up against it.</li>
+          <li>A darker, wet-sand block is waterlogged mud: dropped on lava it fills it completely, however deep (but not the infinite lava around the edge). Touching a waterlogged block waterlogs the rest of that stack too.</li>
           <li>Blocks can land on the crown and cover it. Push them off to uncover it.</li>
           <li>Stepping into lava, or off the edge, is fatal: the level restarts. There is no limit on undo.</li>
         </ul>
@@ -39,8 +67,6 @@
           <span>Preview where a push's blocks would land</span>
         </label>
       </div>
-
-      <nav id="level-nav" class="level-nav" aria-label="Levels"></nav>
 
       <div id="board-wrap" class="board-wrap">
         <svg id="board" class="board" role="img" aria-label="Game board"></svg>

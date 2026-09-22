@@ -90,6 +90,33 @@ test("with no disposal steps, blocks and lava depth balance exactly (surplus 0)"
   assert.ok(built >= 60);
 });
 
+test("soak steps mark the stack put back wet, and the sequence (played through the real engine, wet mechanic and all) still wins", () => {
+  const rng = mulberry32(3);
+  let built = 0;
+  let withSoak = 0;
+  for (let attempt = 0; attempt < 400 && built < 100; attempt += 1) {
+    const result = buildByReversal(rng, { objective: "reach", soakChance: 0.4, minSoakDepth: 3, maxSoakDepth: 9 });
+    if (!result) continue;
+    built += 1;
+    if (result.stepKinds.includes("soak")) {
+      withSoak += 1;
+      assert.ok(result.level.wet.some((w) => w), "a soak step must leave some stack wet");
+    }
+    assert.equal(regionOf(replay(result).state).reachesGoal, true);
+  }
+  assert.ok(built >= 60, `only built ${built} levels`);
+  assert.ok(withSoak > 20, `only ${withSoak} levels used a soak step`);
+});
+
+// A single soak step only guarantees *that step* needs a wet block: the depth it
+// gives its lava cell is picked once, directly (not accumulated the way "uncover"
+// depths are), so it is never reduced by the level's other steps. But whether the
+// finished level as a whole still needs it -- whether some other, unrelated stack
+// or route the rest of the build happened to leave lying around can reach the goal
+// without ever touching that cell -- isn't something a single reverse step can
+// promise; only checking the actual solver's dried-back result can (which is what
+// experiments/mud-candidates.js's evaluate() does before accepting a candidate).
+
 test("transport steps carry blocks without leaving lava, and the sequence still wins", () => {
   const rng = mulberry32(9);
   let built = 0;

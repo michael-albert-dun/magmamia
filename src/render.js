@@ -79,9 +79,10 @@ function renderCell(svg, s, index, left, top) {
   } else {
     svgElement("rect", { class: isGoal ? "cell-floor is-goal" : "cell-floor", ...box }, svg);
     if (value > 0) {
+      const wet = Boolean(s.wet && s.wet[index]);
       const inset = 7;
-      svgElement("rect", { class: "stack", x: left + inset, y: top + inset, width: CELL - 2 * inset, height: CELL - 2 * inset, rx: 5 }, svg);
-      svgElement("text", { class: "cell-number on-stack", x: centerX, y: centerY }, svg).textContent = String(value);
+      svgElement("rect", { class: wet ? "stack is-wet" : "stack", x: left + inset, y: top + inset, width: CELL - 2 * inset, height: CELL - 2 * inset, rx: 5 }, svg);
+      svgElement("text", { class: wet ? "cell-number on-stack on-wet" : "cell-number on-stack", x: centerX, y: centerY }, svg).textContent = String(value);
     }
   }
   if (index === s.player) {

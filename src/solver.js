@@ -49,7 +49,15 @@ function regionOf(state) {
 
 function stateKey(state) {
   let key = "";
-  for (let i = 0; i < state.cells.length; i += 1) key += String.fromCharCode(state.cells[i] + 64);
+  const wet = state.wet;
+  for (let i = 0; i < state.cells.length; i += 1) {
+    const value = state.cells[i];
+    // A wet stack behaves differently from a dry one of the same height (see
+    // "There will be mud" in the README), so its code must land outside every dry
+    // or lava code (which only ever run -26..26): shift it clear of that range.
+    const soggy = wet && value > 0 && wet[i] ? 64 : 0;
+    key += String.fromCharCode(value + 64 + soggy);
+  }
   return key + String.fromCharCode(state.player + 64);
 }
 
@@ -255,10 +263,12 @@ function analyse(start, options = {}) {
 // up against a wall), "stack" (a block lands on an existing stack), "edge"
 // (blocks are lost into infinite lava), "hop" (a stack topples over a lava cell
 // it only shallows, carrying a block across to the far side, where it can be
-// pushed on from a new direction) and "shuffle" (two adjacent singles are
-// merged into a 2-stack, which is then pushed so it lays two singles again:
-// repeating that moves a pair of blocks along, one position at a time). Filling
-// lava is the ordinary case and isn't listed.
+// pushed on from a new direction), "shuffle" (two adjacent singles are merged
+// into a 2-stack, which is then pushed so it lays two singles again: repeating
+// that moves a pair of blocks along, one position at a time) and "soak" (a
+// waterlogged block lands on a dry stack, making the whole thing wet -- see
+// "There will be mud" in the README). Filling lava is the ordinary case and
+// isn't listed.
 function solutionEvents(start, path) {
   const events = new Set();
   const pairs = new Set(); // Cells holding a 2-stack made by merging two singles.
@@ -275,7 +285,12 @@ function solutionEvents(start, path) {
       }
       if (landed.has(landing)) events.add("pile");
       landed.add(landing);
-      if (state.cells[landing] > 0) events.add("stack");
+      if (state.cells[landing] > 0) {
+        events.add("stack");
+        const wasWet = Boolean(state.wet && state.wet[landing]);
+        const isWet = Boolean(outcome.state.wet && outcome.state.wet[landing]);
+        if (!wasWet && isWet) events.add("soak");
+      }
       if (state.goals[landing] && outcome.state.cells[landing] > 0) events.add("cover");
       if (state.cells[landing] < 0 && outcome.state.cells[landing] < 0) crossedUnfilled = true;
       else if (crossedUnfilled && state.cells[landing] >= 0) events.add("hop");
@@ -324,6 +339,44 @@ function solutionCoupling(start, path) {
   return { pushes: path.length, criticalPath, coupling: path.length === 0 ? 1 : criticalPath / path.length };
 }
 
+// Stacks with exactly one push available on the board as it stands: the cell ahead
+// isn't a wall, and the cell behind is bare floor (not a wall, lava, infinite lava or
+// another stack) so the player could stand there. Such a stack is a chore rather than
+// a choice. Each result is { cell, name, ahead, clear }, where `clear` says the
+// pushing cell is one the player can already walk to: nothing has to be done first,
+// which Michael found the worst kind. Unlike trivialDisposalStacks this looks at the
+// position, not just the geometry, so a neighbour that gets moved can free a stack
+// for more pushes later; it is meant for judging a starting position.
+function forcedPushStacks(state) {
+  const { cols, rows, cells, walls } = state;
+  const abyss = state.abyss;
+  const reachable = new Set(regionOf(state).region);
+  const forced = [];
+  for (let q = 0; q < cells.length; q += 1) {
+    if (cells[q] <= 0) continue;
+    const x = q % cols;
+    const y = (q - x) / cols;
+    const possible = [];
+    for (const name of SOLVER_DIRS) {
+      const { dx, dy } = solverEngine.DIRECTIONS[name];
+      const ax = x + dx;
+      const ay = y + dy;
+      const bx = x - dx;
+      const by = y - dy;
+      if (ax < 0 || ay < 0 || ax >= cols || ay >= rows || bx < 0 || by < 0 || bx >= cols || by >= rows) continue;
+      const ahead = ay * cols + ax;
+      const behind = by * cols + bx;
+      if (walls[ahead] || walls[behind] || (abyss && abyss[behind]) || cells[behind] !== 0) continue;
+      possible.push({ name, ahead, behind });
+    }
+    if (possible.length === 1) {
+      const { name, ahead, behind } = possible[0];
+      forced.push({ cell: q, name, ahead, clear: reachable.has(behind) });
+    }
+  }
+  return forced;
+}
+
 // Stacks that can only ever be pushed one way, and that way sends every block
 // straight into infinite lava: chores rather than choices, obvious at a glance.
 // Judged on the initial geometry alone: a direction is possible if the cell ahead
@@ -357,5 +410,5 @@ function trivialDisposalStacks(state) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, regionOf };
+  module.exports = { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, forcedPushStacks, regionOf };
 }

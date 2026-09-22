@@ -17,10 +17,14 @@
 // lava), --min-coupling (default 0, off), --obstruct N (after building, try to add up
 // to N walls across the intended route, keeping each that leaves the level solvable
 // and lengthens the shortest solution; default 2),
+// --max-forced-clear N / --max-forced N (stacks with only one possible push
+// direction: those whose pushing cell is already walkable from the start, default 0,
+// and all of them, default 2; from round 2 playtesting, where a stack with a single
+// available push, especially one in the clear, was a problem),
 // --json FILE (rewritten as candidates are found), --objective all|lava (default all).
 const fs = require("fs");
 const { formatLevel, move } = require("../src/engine.js");
-const { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks } = require("../src/solver.js");
+const { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, forcedPushStacks } = require("../src/solver.js");
 const { buildByReversal } = require("../src/generator.js");
 
 const args = {};
@@ -35,6 +39,8 @@ const MAX_SURPLUS = Number(args["max-surplus"] ?? 2);
 const MIN_LAVA_DEPTH = Number(args["min-lava-depth"] ?? 8);
 const MIN_COUPLING = Number(args["min-coupling"] ?? 0);
 const OBSTRUCT = Number(args.obstruct ?? 2);
+const MAX_FORCED_CLEAR = Number(args["max-forced-clear"] ?? 0);
+const MAX_FORCED = Number(args["max-forced"] ?? 2);
 const KEEP_DECORATION = Number(args["keep-decoration"] ?? 1); // Inert pieces left in as red herrings.
 const CAP = 150000;
 const CAP_PIECE = 60000;
@@ -151,6 +157,8 @@ while ((Date.now() - started) / 60000 < MAX_MINUTES) {
   if (first.pushes < MIN_PUSHES || first.pushes > MAX_PUSHES) continue;
   const { level, removed, remaining } = pruneDecoration(obstructed.level, first.pushes, KEEP_DECORATION);
   if (trivialDisposalStacks(level).length > 0) continue;
+  const forced = forcedPushStacks(level);
+  if (forced.length > MAX_FORCED || forced.filter((f) => f.clear).length > MAX_FORCED_CLEAR) continue;
   const r = analyse(level, { full: false, maxStates: CAP, objective: OBJECTIVE });
   const coupling = solutionCoupling(level, r.path);
   if (coupling.coupling < MIN_COUPLING) continue;
@@ -160,7 +168,7 @@ while ((Date.now() - started) / 60000 < MAX_MINUTES) {
   const lava = [...level.cells].filter((v) => v < 0).length;
   const text = formatLevel(level);
   if (found.some((f) => f.text === text)) continue;
-  found.push({ text, pushes: r.pushes, events, states: r.states, borderWalls: walls, stacks, lava, prunedPieces: removed, redHerrings: remaining, surplus, lavaDepth, coupling: coupling.coupling, addedWalls: obstructed.added, seed: SEED });
+  found.push({ text, pushes: r.pushes, events, states: r.states, borderWalls: walls, stacks, lava, prunedPieces: removed, redHerrings: remaining, surplus, lavaDepth, coupling: coupling.coupling, addedWalls: obstructed.added, forcedStacks: forced.length, seed: SEED });
   if (args.json) fs.writeFileSync(args.json, JSON.stringify(found, null, 2));
 }
 console.log(`seed ${SEED}: tried ${tried} reverse-built levels in ${((Date.now() - started) / 60000).toFixed(1)} min, ${found.length} passed`);
