@@ -6,11 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f1ec">
   <title>Magma Mia!</title>
-  <link rel="stylesheet" href="styles.css?v=20260922f">
-  <script src="src/engine.js?v=20260922f" defer></script>
-  <script src="src/levels.js?v=20260922f" defer></script>
-  <script src="src/render.js?v=20260922f" defer></script>
-  <script src="src/play.js?v=20260922f" defer></script>
+  <link rel="stylesheet" href="styles.css?v=20260923c">
+  <script src="src/engine.js?v=20260923c" defer></script>
+  <script src="src/levels.js?v=20260923h" defer></script>
+  <script src="src/render.js?v=20260923f" defer></script>
+  <script src="src/play.js?v=20260923e" defer></script>
 </head>
 
 <body>
@@ -56,6 +56,7 @@
           <li>A block dropped on lava makes it one shallower; lava with nothing left is safe floor. Blocks that fall off the edge are lost, and blocks that hit a wall pile up against it.</li>
           <li>A darker, wet-sand block is waterlogged mud: dropped on lava it fills it completely, however deep (but not the infinite lava around the edge). Touching a waterlogged block waterlogs the rest of that stack too.</li>
           <li>Blocks can land on the crown and cover it. Push them off to uncover it.</li>
+          <li>A small purple flask on the floor is a potion: pick it up by walking onto it. It buys exactly one otherwise-fatal step onto lava, then it's used up -- so the step right after that one still has to land somewhere safe. It doesn't work on the swirling abyss around the edge, which is always fatal. While you're carrying a potion, the ring around the player turns green.</li>
           <li>Stepping into lava, or off the edge, is fatal: the level restarts. There is no limit on undo.</li>
         </ul>
         <label class="field-check">

@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { parseLevel, hasClosedBorder } = require("../src/engine.js");
-const { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_ROUND_1, DANCEFLOOR_ROUND_2, DANCEFLOOR_CANDIDATES, MUD_ROUND_1, MUD_ROUND_2 } = require("../src/levels.js");
+const { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_ROUND_1, DANCEFLOOR_ROUND_2, DANCEFLOOR_CANDIDATES, MUD_ROUND_1, MUD_ROUND_2, POTION_LEVELS, BRIDGE_DENSE, BRIDGE_OPEN } = require("../src/levels.js");
 const { analyse } = require("../src/solver.js");
 const { solve } = require("./solve.js");
 
@@ -77,9 +77,31 @@ for (const [name, levels] of Object.entries(MUD_SETS)) {
   });
 }
 
+// Bridge candidates (experiments/bridge-candidates.js): closed border, on top
+// of the `optimum` check already covered by PLAYABLE_SETS below.
+const BRIDGE_SETS = { "bridge dense": BRIDGE_DENSE, "bridge open": BRIDGE_OPEN };
+for (const [name, levels] of Object.entries(BRIDGE_SETS)) {
+  levels.forEach((level, index) => {
+    test(`${name} level ${index + 1} has a closed border`, () => {
+      assert.equal(hasClosedBorder(parseLevel(level.text)), true);
+    });
+  });
+}
+
+// Potions: closed border only. The exact solver's analyse()/regionOf() don't
+// understand them yet (regionOf treats lava as always impassable, potion or no
+// potion), so it would wrongly call a potion level unsolvable; solvability is
+// instead checked directly against the real engine in tests/engine.test.js. No
+// `optimum` either, since the solver can't rate these levels.
+POTION_LEVELS.forEach((level, index) => {
+  test(`potion level ${index + 1} has a closed border`, () => {
+    assert.equal(hasClosedBorder(parseLevel(level.text)), true);
+  });
+});
+
 // Each playable level's `optimum` (the par shown when it is solved) must be the
 // solver's fewest pushes, so a level edit that changes the puzzle can't leave a stale one.
-const PLAYABLE_SETS = { curated: CURATED_LEVELS, "dancefloor round 1": DANCEFLOOR_ROUND_1, "dancefloor round 2": DANCEFLOOR_ROUND_2, "dancefloor latest": DANCEFLOOR_CANDIDATES, "mud round 1": MUD_ROUND_1, "mud round 2": MUD_ROUND_2 };
+const PLAYABLE_SETS = { curated: CURATED_LEVELS, "dancefloor round 1": DANCEFLOOR_ROUND_1, "dancefloor round 2": DANCEFLOOR_ROUND_2, "dancefloor latest": DANCEFLOOR_CANDIDATES, "mud round 1": MUD_ROUND_1, "mud round 2": MUD_ROUND_2, "bridge dense": BRIDGE_DENSE, "bridge open": BRIDGE_OPEN };
 for (const [name, levels] of Object.entries(PLAYABLE_SETS)) {
   levels.forEach((level, index) => {
     test(`${name} level ${index + 1} has the right optimum`, () => {

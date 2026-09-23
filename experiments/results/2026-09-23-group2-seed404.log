@@ -1,0 +1,22 @@
+seed 404: 13441 evaluations in 1200.1s, 2 levels pass the filters
+
+score 52.5  pushes 7  solutions 1  slack 4  tempting 0  dead 84%  end positions 8  events hop,pile,stack  states 953
+~~~#~~##
+#...#..~
+#..E...~
+#..Ab..~
+~..##..~
+~.#..a.#
+~.#.*#@.#
+#~####~#
+
+score 47.1  pushes 10  solutions 1  slack 0  tempting 1  dead 87%  end positions 2  events shuffle,stack  states 725
+~#~~~##~
+#a*..c@.#
+#cb..A.#
+#...bA#~
+~...c..#
+#.aaB..~
+#.....#~
+~######~
+

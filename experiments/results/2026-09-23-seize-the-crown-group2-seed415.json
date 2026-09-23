@@ -1,0 +1,24 @@
+[
+  {
+    "text": "~##~#~##\n~@...b#~\n#B.b*a..~\n~aD.b..~\n~a.b.a.~\n~#...C.~\n~...a..#\n#~#~~#~#",
+    "score": 84,
+    "passes": true,
+    "pushes": 13,
+    "solutions": 1,
+    "sequences": 1,
+    "slack": 2,
+    "decorative": 0,
+    "events": [
+      "edge",
+      "hop",
+      "pile",
+      "shuffle",
+      "stack"
+    ],
+    "tempting": 1,
+    "dead": 0.7711645896003438,
+    "states": 9308,
+    "endPositions": 7,
+    "optimalEndPositions": 1
+  }
+]

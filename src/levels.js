@@ -374,6 +374,118 @@ const CURATED_LEVELS = [
       "~....#.~",
       "~~~~~~~~"
     ].join("\n")
+  },
+  {
+    // seed 403 (group 2 search 2026-09-23): 13 pushes, 1 optimal solution, 51% of positions are dead ends; contains a hop.
+    optimum: 13,
+    text: [
+      "~#~#~~~~",
+      "#..b.E@#",
+      "~a*.a.ab#",
+      "#...A..~",
+      "~..cDb.~",
+      "~a....a~",
+      "~..a#..#",
+      "~#~~##~~"
+    ].join("\n")
+  },
+  {
+    // seed 403 (group 2 search 2026-09-23): 11 pushes, 1 optimal solution, 53% of positions are dead ends; contains a hop and a shuffle.
+    optimum: 11,
+    text: [
+      "~~#~~#~~",
+      "~a*..b.@~",
+      "~.b#...~",
+      "#...aBa#",
+      "#..bE..~",
+      "~..ac..#",
+      "~.bb...~",
+      "~##~##~~"
+    ].join("\n")
+  },
+  {
+    // seed 403 (group 2 search 2026-09-23): 9 pushes, 2 optimal solutions, 65% of positions are dead ends; contains a hop.
+    optimum: 9,
+    text: [
+      "~~#~#~##",
+      "#..a...~",
+      "#..b*D..#",
+      "#...#..~",
+      "#....#.#",
+      "~..B.@a#",
+      "~..b#..#",
+      "~~##~~##"
+    ].join("\n")
+  },
+  {
+    // seed 403 (group 2 search 2026-09-23): 12 pushes, 1 optimal solution, 82% of positions are dead ends; contains a shuffle.
+    optimum: 12,
+    text: [
+      "####~~##",
+      "~...#.a~",
+      "#..A...#",
+      "~.bEa*..~",
+      "~.a.#..#",
+      "~d.aa..#",
+      "~.....@#",
+      "##~#~#~~"
+    ].join("\n")
+  },
+  {
+    // seed 404 (group 2 search 2026-09-23): 7 pushes, 1 optimal solution, 84% of positions are dead ends; contains a hop.
+    optimum: 7,
+    text: [
+      "~~~#~~##",
+      "#...#..~",
+      "#..E...~",
+      "#..Ab..~",
+      "~..##..~",
+      "~.#..a.#",
+      "~.#.*#@.#",
+      "#~####~#"
+    ].join("\n")
+  },
+  {
+    // seed 404 (group 2 search 2026-09-23): 10 pushes, 1 optimal solution, 87% of positions are dead ends; contains a shuffle.
+    optimum: 10,
+    text: [
+      "~#~~~##~",
+      "#a*..c@.#",
+      "#cb..A.#",
+      "#...bA#~",
+      "~...c..#",
+      "#.aaB..~",
+      "#.....#~",
+      "~######~"
+    ].join("\n")
+  },
+  {
+    // seed 405 (group 2 search 2026-09-23): 9 pushes, 1 optimal solution, 72% of positions are dead ends; contains a hop and a shuffle.
+    optimum: 9,
+    text: [
+      "~~~~~##~",
+      "#.b@...~",
+      "~..abA.#",
+      "#......~",
+      "#.dD..b#",
+      "~a.B##.#",
+      "#...c..*~",
+      "#~#~~~~~"
+    ].join("\n")
+  },
+  {
+    // seed 415 (group 2 search 2026-09-23): 13 pushes, 1 optimal solution, 77% of positions are dead ends; contains a hop and a shuffle.
+    optimum: 13,
+    text: [
+      "~##~#~##",
+      "~@...b#~",
+      "#B.b*a..~",
+      "~aD.b..~",
+      "~a.b.a.~",
+      "~#...C.~",
+      "~...a..#",
+      "#~#~~#~#"
+    ].join("\n")
   }
 ];
 
@@ -1282,6 +1394,432 @@ const MUD_ROUND_2 = [
   }
 ];
 
+// Potions (no name for this one yet): an item on the floor, picked up by walking onto
+// it, that buys exactly one otherwise-fatal step onto lava before it's used up (see
+// README). New enough that the exact solver doesn't understand it yet -- regionOf in
+// src/solver.js treats lava as always impassable, so analyse() would wrongly call this
+// unsolvable -- so unlike every other set, this one isn't checked by running the
+// solver over it in tests/levels.test.js; tests/engine.test.js plays the exact move
+// sequence through the real engine instead, and there's no `optimum` on any of these
+// levels since the solver can't rate them.
+//
+// Levels 4 on are generated (via src/generator.js's buildByReversalWithPotion
+// and experiments/potion-candidates.js), rather than hand-built like 1-3.
+// An earlier round of four was pulled after turning out trivial: the potion was
+// checked necessary, but the pushes recorded before/after the crossing weren't
+// (buildByReversalWithPotion placed the goal by a "clear the whole board and see
+// what's reachable" trick that couldn't tell newly-opened floor from floor that
+// was just sitting there empty the whole time, so the goal kept landing
+// somewhere already walkable without ever doing the recorded pushes, and the
+// same applied to the pushes leading up to the crossing). Fixed by checking
+// each phase against the real solver right after building it and retrying from
+// scratch if its pushes turn out not to be the true minimum, rather than
+// trusting construction (see buildByReversalWithPotion's own comment); this
+// round is generated with that fix in place, with `minPushesBefore: 1` so the
+// movement between picking the potion up and reaching the crossing always
+// involves at least one push too.
+//
+// Being necessary and tight doesn't mean *compact*, though: the generator's
+// default board is mostly open floor with a handful of walls sprinkled in, so
+// a short phase's pushes can easily end up confined to one corner, leaving the
+// rest of a big board just empty walkable space (level 3 above was originally
+// generated this way -- almost the whole left half of the board was dead
+// space, and got replaced by the small hand-built idea Michael spotted in the
+// corner that was actually doing something). Worth a generator-side fix later
+// (see docs/puzzle-generation-research.md) rather than something these levels
+// individually work around.
+const POTION_LEVELS = [
+  {
+    // #1: the tutorial. Walk to the potion, pick it up, and use it to survive the one
+    // step of lava between here and the crown.
+    text: [
+      "########",
+      "#@.!.a.*#",
+      "########"
+    ].join("\n")
+  },
+  {
+    // #2: potions and pushing together. Pick up the potion, step onto the lava band
+    // with it (a push is safe from there -- it's the target cell that matters, not
+    // where the player is standing). The pushed stack hops the goal's lava cell,
+    // shallowing it without filling it and leaving a single block one row further on
+    // (a height-3 stack would drop a block on every cell of the walk-around path
+    // below, so this one is height 2). The lava band means there's no way back up, so
+    // the only route to the block is the U-turn along the left side; pushing it back
+    // finishes filling the goal cell, which is then just a walk-on.
+    text: [
+      "#####",
+      "#@.!#",
+      "#aaa#",
+      "#..B#",
+      "#.ab*#",
+      "#...#",
+      "#...#",
+      "#####"
+    ].join("\n")
+  },
+  {
+    // #3: a second, compact tutorial -- Michael's own idea, spotted in a generated
+    // level that was otherwise mostly empty space (a systemic issue with the
+    // generator, see the comment above): pick up the potion, step onto the lava
+    // band with it, then push the box off the goal to win.
+    text: [
+      "#######",
+      "#@..!.#",
+      "#aaaaa#",
+      "#..B*..#",
+      "#######"
+    ].join("\n")
+  },
+  {
+    // #4: generated. One push to reach the crossing, two more to finish.
+    text: [
+      "##~~~~~~",
+      "~ba....~",
+      "~Ba*....~",
+      "#@a....~",
+      "~!aC...~",
+      "##Ea...#",
+      "~..a...#",
+      "~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // #5: generated. Three pushes to reach the potion and the crossing, one to
+    // finish -- most of the work happens before the crossing this time.
+    text: [
+      "~~~~~~~~",
+      "~aaB@..~",
+      "~#B.!..~",
+      "~.baaC.~",
+      "~.a...#~",
+      "~aaa*aE.~",
+      "~......~",
+      "~~#~~~~~"
+    ].join("\n")
+  },
+  {
+    // #6: generated. One push before the crossing, two after.
+    text: [
+      "~#~~~~~~",
+      "~......~",
+      "~..#.D.~",
+      "~....a.~",
+      "~..##a.~",
+      "~aaa*Da.~",
+      "~aB@!a.~",
+      "~~~~~#~#"
+    ].join("\n")
+  },
+  {
+    // #7: generated. One push before the crossing, three to finish.
+    text: [
+      "~~~~~~~#",
+      "~...#.a~",
+      "~.#...a~",
+      "~.@!aAa~",
+      "~.E#E*.a~",
+      "~.a.a.D~",
+      "~.a.a..~",
+      "~~~~~~~~"
+    ].join("\n")
+  }
+];
+
+// Generated by experiments/bridge-candidates.js -- Michael's own design, a
+// completely different construction strategy from buildByReversal/CURATED_LEVELS:
+// start from dense lava with no stacks at all (so the floor splits into
+// disconnected "islands"), add stacks one at a time only where doing so bridges
+// two islands that weren't already connected, then keep only the branch
+// reachable from the farthest such (start, goal) pair. Ordinary "reach"
+// levels, no potion. Known gap (flagged before building it): this can't
+// produce levels that need "hop" or any other reuse of existing resources,
+// since every bridge is a single one-shot fully-filling push -- see the
+// generator's own comment for the rest of the design. `optimum` here is the
+// number of bridges on the chosen path, already confirmed against the solver
+// and a full engine replay at generation time (see docs/puzzle-generation-research.md
+// for the research that prompted the approach).
+//
+// Two rounds, kept apart because they compare a design question that isn't
+// settled yet: how dense the lava should be. BRIDGE_DENSE is the default
+// (`--lava-chance 0.55`): Michael's read, from playing it, is that it's too
+// dense and "devolves to simple maze-solving" rather than a real decision
+// point. BRIDGE_OPEN was first tried at 0.35, still judged too dense on
+// review, and is now regenerated at `--lava-chance 0.30` -- notably fewer,
+// larger islands, shorter paths (2-3 pushes rather than 3-5), still to be
+// judged. (One earlier mix-up, now moot since this round replaced it: an
+// "as-is" comparison run once accidentally omitted `--lava-chance` entirely
+// and compared two same-density samples instead of two different densities.)
+//
+// Michael's own note while reviewing BRIDGE_DENSE, not yet acted on: interior
+// walls here are placed independently of the bridge logic (plain random
+// obstacles), but they could instead play a real structural role -- creating
+// regions themselves (a permanent barrier, unlike lava which can be bridged),
+// or acting as an obstacle or aid within a specific push or push sequence
+// (matching how a wall already changes push outcomes generally -- see
+// "Pushing" in README.md). Worth a real design pass, not done here.
+const BRIDGE_DENSE = [
+  {
+    // 3 pushes, 8 islands, 3 bridges kept
+    optimum: 3,
+    text: [
+      "~~#~~~#~~~",
+      "~cbcbcb.a~",
+      "~bbaba..a~",
+      "##b....A.~",
+      "~cccbacab~",
+      "~cbcbAc.*a~",
+      "#cc.c..ba~",
+      "~c#.b.aaa~",
+      "~a@Aa.cab~",
+      "~~~##~~#~~"
+    ].join("\n")
+  },
+  {
+    // 3 pushes, 12 islands, 3 bridges kept
+    optimum: 3,
+    text: [
+      "~~~~~~~~##",
+      "~...Aa.*bb~",
+      "~.c...cbc~",
+      "~.b.bbbbb~",
+      "~.cacaaba~",
+      "~bcAcacac~",
+      "~#..aA@c#~",
+      "~ccbbabab~",
+      "~baabbbbc#",
+      "~#~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // 3 pushes, 6 islands, 3 bridges kept
+    optimum: 3,
+    text: [
+      "~~~~~~~~#~",
+      "~aaa.aaab~",
+      "~a#b..aab~",
+      "~ca.Aa..b~",
+      "~.caa.a.c~",
+      "~..Ab...c~",
+      "~cb@#cb..~",
+      "~aaaa....~",
+      "~ab.*aA.b.~",
+      "~~~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // 3 pushes, 10 islands, 3 bridges kept
+    optimum: 3,
+    text: [
+      "~~~~#~~#~~",
+      "~bcbbaccc~",
+      "~ccbaab.b~",
+      "~caca.aA.#",
+      "~b.*aA.a.a~",
+      "~ab..aabA#",
+      "~#.c.#..@~",
+      "~....ca..~",
+      "~c.bbacac~",
+      "~~~~~~#~~~"
+    ].join("\n")
+  },
+  {
+    // 3 pushes, 12 islands, 5 bridges kept
+    optimum: 3,
+    text: [
+      "~~~~~~#~~~",
+      "~@ccc#cba~",
+      "~Abab#abb#",
+      "~abbbbacc~",
+      "#..caabcc~",
+      "~Acccaabc~",
+      "~aaababaa~",
+      "#.Aa.*bbcb~",
+      "#a.bbabaa~",
+      "#~~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // 3 pushes, 8 islands, 5 bridges kept
+    optimum: 3,
+    text: [
+      "~~~~~~~#~~",
+      "~.*a.aA@b.~",
+      "~ab.c.AaC~",
+      "~Ab..bbaa#",
+      "~.aA..bca~",
+      "~ca.cacaa#",
+      "~....ab..~",
+      "~#a.ccc#b#",
+      "~....acca~",
+      "~~~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // 3 pushes, 8 islands, 4 bridges kept
+    optimum: 3,
+    text: [
+      "#~~~~#~#~~",
+      "~bbbaabcb~",
+      "~ccabaccb~",
+      "~##bccb.c~",
+      "~cacb.aA.~",
+      "~cbcaBcaa#",
+      "~baaaaccA~",
+      "~abcaac@.~",
+      "#cbac.*bbb~",
+      "~~~~~~~~~#"
+    ].join("\n")
+  },
+  {
+    // 2 pushes, 6 islands, 4 bridges kept
+    optimum: 2,
+    text: [
+      "~#~~~~~~~~",
+      "~aacaabcc~",
+      "~aaacaaa#~",
+      "~abbcccbc~",
+      "~ccbbbbc@#",
+      "~bca.aaaA~",
+      "~cba.c..a~",
+      "##cc.*aA..~",
+      "~aba.c...~",
+      "~~~~~~~~~~"
+    ].join("\n")
+  }
+];
+
+const BRIDGE_OPEN = [
+  {
+    // 3 pushes, 7 islands, 3 bridges kept
+    optimum: 3,
+    text: [
+      "~~~##~~~~~",
+      "~cbb..Aa.~",
+      "~c..a.cc.*~",
+      "~a..b.ccb#",
+      "#c...a.b@~",
+      "~ab..A.aA~",
+      "~ca.a..#a~",
+      "~b#......~",
+      "~cac.c...~",
+      "~#~~~~~~#~"
+    ].join("\n")
+  },
+  {
+    // 3 pushes, 7 islands, 4 bridges kept
+    optimum: 3,
+    text: [
+      "~~~~~~~#~~",
+      "~...#..ca~",
+      "~.......b~",
+      "~B.c.acc.~",
+      "#abc#AAa.~",
+      "~a.c@...b~",
+      "#.Ac...c.#",
+      "~aa.a....~",
+      "~...*b....#",
+      "~~~~~#~~~~"
+    ].join("\n")
+  },
+  {
+    // 3 pushes, 5 islands, 3 bridges kept
+    optimum: 3,
+    text: [
+      "~~#~~~~~~~",
+      "#.caabcac~",
+      "~...cbaac~",
+      "~c...*aA.#~",
+      "#.ca#..a.#",
+      "~.c..acA.~",
+      "~..b....b~",
+      "~c@Aa...a~",
+      "~...ac..b~",
+      "~~~~~#~~~~"
+    ].join("\n")
+  },
+  {
+    // 3 pushes, 6 islands, 3 bridges kept
+    optimum: 3,
+    text: [
+      "~~#~~~~~~~",
+      "~baac....~",
+      "~aaac....~",
+      "~bcaab.A@~",
+      "~.aa..caa~",
+      "~..aA....~",
+      "#Aac.a..a~",
+      "~abb#..c.~",
+      "~.*.cc#...#",
+      "~~#~~~~#~~"
+    ].join("\n")
+  },
+  {
+    // 2 pushes, 7 islands, 3 bridges kept
+    optimum: 2,
+    text: [
+      "#~~~~~~~~~",
+      "~........#",
+      "~bA.#...b~",
+      "~.acb....~",
+      "~..cccb..~",
+      "~Abbbccc.~",
+      "~aabaca..~",
+      "~.*bab#bc@~",
+      "~aacaabab~",
+      "~~~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // 2 pushes, 4 islands, 3 bridges kept
+    optimum: 2,
+    text: [
+      "~~~~~~~~~~",
+      "~.@.c.c..~",
+      "#Abac.c..~",
+      "~a..#....#",
+      "~....c..*b~",
+      "~...c.ca.~",
+      "~ba.a.aA.~",
+      "~.#......~",
+      "~..aA.a.a~",
+      "~~#~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // 2 pushes, 5 islands, 2 bridges kept
+    optimum: 2,
+    text: [
+      "~~~~~~~~#~",
+      "#...*c.cac~",
+      "#a.b..acb~",
+      "~b.a.bacb~",
+      "~.a...ccb~",
+      "~.A..cc#.~",
+      "~....aA..~",
+      "~.ca#.b.b~",
+      "~.aa@....~",
+      "~~~~~~~~~~"
+    ].join("\n")
+  },
+  {
+    // 2 pushes, 4 islands, 2 bridges kept
+    optimum: 2,
+    text: [
+      "~~~~~~~~~~",
+      "~c...bbbc~",
+      "~........~",
+      "~.A....@.~",
+      "~#a#ca...~",
+      "~.....cc.~",
+      "~.b...c..#",
+      "~.a....b.~",
+      "#b.*aA.bcc~",
+      "~~~~~##~~~"
+    ].join("\n")
+  }
+];
+
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_ROUND_1, DANCEFLOOR_ROUND_2, DANCEFLOOR_CANDIDATES, MUD_ROUND_1, MUD_ROUND_2 };
+  module.exports = { PRESET_LEVELS, CURATED_LEVELS, DANCEFLOOR_ROUND_1, DANCEFLOOR_ROUND_2, DANCEFLOOR_CANDIDATES, MUD_ROUND_1, MUD_ROUND_2, POTION_LEVELS, BRIDGE_DENSE, BRIDGE_OPEN };
 }

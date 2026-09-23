@@ -1,0 +1,12 @@
+seed 405: 10860 evaluations in 1201.5s, 1 levels pass the filters
+
+score 70.0  pushes 9  solutions 1  slack 2  tempting 0  dead 72%  end positions 17  events edge,hop,pile,shuffle,stack  states 7775
+~~~~~##~
+#.b@...~
+~..abA.#
+#......~
+#.dD..b#
+~a.B##.#
+#...c..*~
+#~#~~~~~
+

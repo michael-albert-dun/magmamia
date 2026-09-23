@@ -1,0 +1,87 @@
+[
+  {
+    "text": "~~#~~#~~\n~a*..b.@~\n~.b#...~\n#...aBa#\n#..bE..~\n~..ac..#\n~.bb...~\n~##~##~~",
+    "score": 81,
+    "passes": true,
+    "pushes": 11,
+    "solutions": 1,
+    "sequences": 1,
+    "slack": 4,
+    "decorative": 0,
+    "events": [
+      "cover",
+      "edge",
+      "hop",
+      "pile",
+      "shuffle",
+      "stack"
+    ],
+    "tempting": 0,
+    "dead": 0.5306666666666666,
+    "states": 375,
+    "endPositions": 9,
+    "optimalEndPositions": 1
+  },
+  {
+    "text": "~#~#~~~~\n#..b.E@#\n~a*.a.ab#\n#...A..~\n~..cDb.~\n~a....a~\n~..a#..#\n~#~~##~~",
+    "score": 77,
+    "passes": true,
+    "pushes": 13,
+    "solutions": 1,
+    "sequences": 1,
+    "slack": 5,
+    "decorative": 0,
+    "events": [
+      "edge",
+      "hop",
+      "pile",
+      "stack"
+    ],
+    "tempting": 0,
+    "dead": 0.5083277814790139,
+    "states": 1501,
+    "endPositions": 9,
+    "optimalEndPositions": 1
+  },
+  {
+    "text": "####~~##\n~...#.a~\n#..A...#\n~.bEa*..~\n~.a.#..#\n~d.aa..#\n~.....@#\n##~#~#~~",
+    "score": 73.3265783320343,
+    "passes": true,
+    "pushes": 12,
+    "solutions": 1,
+    "sequences": 1,
+    "slack": 2,
+    "decorative": 0,
+    "events": [
+      "edge",
+      "pile",
+      "shuffle",
+      "stack"
+    ],
+    "tempting": 0,
+    "dead": 0.8168355416991426,
+    "states": 1283,
+    "endPositions": 7,
+    "optimalEndPositions": 1
+  },
+  {
+    "text": "~~#~#~##\n#..a...~\n#..b*D..#\n#...#..~\n#....#.#\n~..B.@a#\n~..b#..#\n~~##~~##",
+    "score": 60,
+    "passes": true,
+    "pushes": 9,
+    "solutions": 2,
+    "sequences": 2,
+    "slack": 2,
+    "decorative": 0,
+    "events": [
+      "edge",
+      "hop",
+      "pile"
+    ],
+    "tempting": 1,
+    "dead": 0.6543535620052771,
+    "states": 758,
+    "endPositions": 9,
+    "optimalEndPositions": 2
+  }
+]

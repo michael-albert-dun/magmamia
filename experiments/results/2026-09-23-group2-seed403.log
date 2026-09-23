@@ -1,0 +1,42 @@
+seed 403: 18045 evaluations in 1200.1s, 4 levels pass the filters
+
+score 81.0  pushes 11  solutions 1  slack 4  tempting 0  dead 53%  end positions 9  events cover,edge,hop,pile,shuffle,stack  states 375
+~~#~~#~~
+~a*..b.@~
+~.b#...~
+#...aBa#
+#..bE..~
+~..ac..#
+~.bb...~
+~##~##~~
+
+score 77.0  pushes 13  solutions 1  slack 5  tempting 0  dead 51%  end positions 9  events edge,hop,pile,stack  states 1501
+~#~#~~~~
+#..b.E@#
+~a*.a.ab#
+#...A..~
+~..cDb.~
+~a....a~
+~..a#..#
+~#~~##~~
+
+score 73.3  pushes 12  solutions 1  slack 2  tempting 0  dead 82%  end positions 7  events edge,pile,shuffle,stack  states 1283
+####~~##
+~...#.a~
+#..A...#
+~.bEa*..~
+~.a.#..#
+~d.aa..#
+~.....@#
+##~#~#~~
+
+score 60.0  pushes 9  solutions 2  slack 2  tempting 1  dead 65%  end positions 9  events edge,hop,pile  states 758
+~~#~#~##
+#..a...~
+#..b*D..#
+#...#..~
+#....#.#
+~..B.@a#
+~..b#..#
+~~##~~##
+
