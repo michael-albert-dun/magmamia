@@ -15,12 +15,12 @@ const REFUSAL_TEXT = {
   "stack-blocked": "That stack is against a wall and won't move.",
   lava: "That's lava, so the move was refused.",
   edge: "That's the edge of the board (lava), so the move was refused.",
-  abyss: "That's infinite lava, so the move was refused."
+  abyss: "That's the abyss, so the move was refused."
 };
 const DEATH_TEXT = {
   lava: "You stepped into the lava. The level has restarted.",
   edge: "You stepped off the edge into the lava. The level has restarted.",
-  abyss: "You stepped into the infinite lava. The level has restarted."
+  abyss: "You stepped into the abyss. The level has restarted."
 };
 
 const state = {

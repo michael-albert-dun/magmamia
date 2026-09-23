@@ -57,6 +57,9 @@ Moving into a stack pushes it, and the stack topples away from the player.
   cell before it. *(open)* If that cell is lava, the piled blocks fill it first
   and only then build a stack (the engine simply adds 1 per block to the cell's
   signed height). This case wasn't in the worked example, so it's my reading.
+- A block landing on a cell with an uncollected **potion** destroys it, whatever
+  else the landing does to that cell (fills lava, starts a stack, adds to one).
+  Potions are fragile: buried is gone, not just covered.
 - The player then steps into the cell the stack was in, which is now floor.
 - A stack directly next to a wall cannot be pushed into it. This is a no-op.
 
@@ -91,8 +94,11 @@ floor, and the last two would reach the wall, so they pile onto that same stack.
   that lava and stacks differ in lightness and stay distinguishable for
   colour-blind players.
 - Numbers are always positive; the colour says whether a cell is lava or a stack.
-- **Infinite lava**: the ordinary lava colour, marked with ∞ where real lava shows
-  its depth. On a closed board it forms the border, alongside any border walls.
+- **Infinite lava (the abyss)**: a dark, space-like square with a black-hole
+  core and a few short white arms curving out of it, not a shade of ordinary
+  lava -- see "Waterlogged blocks" below for why it reads as its own, absolute
+  hazard rather than a variant of lava. On a closed board it forms the border,
+  alongside any border walls.
 - **Push preview** (an option, off by default): with it on, standing next to a
   stack shows a small `+n` tag in the corner of each cell its blocks would land
   on (a wall pile is summed into one tag). Blocks that would be lost into infinite lava
@@ -267,19 +273,24 @@ candidate otherwise passes) brought it back down without giving up on the level.
 
 Visually a wet stack is the same sandy material, darkened like wet sand
 (`--stack-wet` in `styles.css`), rather than a different colour; the brown/red
-colourblind question is deferred until the mechanic itself settles. A separate,
-unbuilt idea: draw infinite lava as a swirly galaxy/vortex rather than plain red,
+colourblind question is deferred until the mechanic itself settles. Infinite
+lava now draws as a swirly vortex rather than plain red (see "Graphics" above),
 since "abyss" (the engine's own name for it, `state.abyss`) is closer to how it
-now reads than "infinite lava".
+reads than "infinite lava" -- and, with potions in the game, it needs to read as
+a different, absolute kind of hazard: a potion buys a step onto ordinary lava
+but never onto the abyss.
 
 ## Levels
 
 Levels will be generated with a solver, and probably also handmade, so there'll
 be a mix. Each playable level carries an `optimum`: the fewest pushes that solve it, from the exact
-solver. The game counts pushes as well as moves (walking is free, so steps say nothing
-about tidiness) and on solving compares them with the optimum. This is a par to strive
-for, not a score to chase; comparing against what other players achieved is *(open)*.
-`tests/levels.test.js` checks each `optimum` against the solver.
+solver, and `tests/levels.test.js` checks it against the solver. The game always
+counts pushes as well as moves (walking is free, so steps say nothing about
+tidiness), but only "Clear the dancefloor" (objective `all`) shows the solved
+message comparing them with the optimum -- that push-optimisation framing is the
+point of tidying up efficiently there, not of the other objectives, whose solved
+message stays plain. This is a par to strive for, not a score to chase;
+comparing against what other players achieved is *(open)*.
 
 The board is bigger than in the other games, since interesting levels need room.
 Either it scrolls on a phone, or the game is desktop-only. A default around 8

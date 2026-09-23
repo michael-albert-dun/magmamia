@@ -2,7 +2,7 @@
 // game (src/play.js), the test bench (src/bench.js) and by tests/experiments run
 // directly in Node, so all of them always agree on what the rules are. See README.md for the design.
 //
-// A state is { rows, cols, cells, walls, abyss, goals, wet, player }:
+// A state is { rows, cols, cells, walls, abyss, goals, wet, potions, carried, player }:
 //   cells   signed height per cell: > 0 is a stack, < 0 is lava (depth is the
 //           absolute value), 0 is floor. Walls and abyss cells hold 0 here too.
 //   walls   0/1 per cell. Static, shared between states.
@@ -18,6 +18,11 @@
 //           stack is waterlogged ("There will be mud"; see README). A stack is
 //           all wet or all dry, never mixed, so this is one bit per cell, not
 //           per block.
+//   potions 0/1 per cell, meaningful only where cells[i] === 0: an uncollected
+//           potion sitting on that floor cell. Walking onto it picks it up (the
+//           bit clears and `carried` goes up by one); see README for what a
+//           carried potion does.
+//   carried how many potions the player is holding right now.
 //   player  cell index (row * cols + col).
 // States are never mutated: move() returns a new one, which makes undo trivial.
 
@@ -54,6 +59,7 @@ function parseLevel(text) {
   const abyss = [];
   const goals = [];
   const wet = [];
+  const potions = [];
   let player = -1;
 
   lines.forEach((line, y) => {
@@ -67,8 +73,12 @@ function parseLevel(text) {
       let wall = 0;
       let deep = 0;
       let soggy = 0;
+      let potion = 0;
       if (ch === ".") {
         value = 0;
+      } else if (ch === "!") {
+        value = 0;
+        potion = 1;
       } else if (ch === "#") {
         wall = 1;
         if (goal) throw new Error(`A wall can't be a goal (${where}).`);
@@ -93,6 +103,7 @@ function parseLevel(text) {
       abyss.push(deep);
       goals.push(goal ? 1 : 0);
       wet.push(soggy);
+      potions.push(potion);
     }
     if (cols === null) cols = x;
     else if (x !== cols) throw new Error(`Row ${y + 1} has ${x} cells but row 1 has ${cols}.`);
@@ -107,6 +118,8 @@ function parseLevel(text) {
     abyss: Uint8Array.from(abyss),
     goals: Uint8Array.from(goals),
     wet: Uint8Array.from(wet),
+    potions: Uint8Array.from(potions),
+    carried: 0,
     player
   };
 }
@@ -129,6 +142,7 @@ function formatLevel(state) {
       else if (i === state.player) line += "@";
       else if (value > 0) line += String.fromCharCode((state.wet && state.wet[i] ? 74 : 64) + value);
       else if (value < 0) line += String.fromCharCode(96 - value);
+      else if (state.potions && state.potions[i]) line += "!";
       else line += ".";
       if (state.goals[i]) line += "*";
     }
@@ -159,7 +173,9 @@ function hasClosedBorder(state) {
 }
 
 // Try to move the player one cell. Returns { result, state, ... } where result is:
-//   "moved"   the player stepped onto floor.
+//   "moved"   the player stepped onto floor (or survived finite lava on a
+//             potion; see below). `usedPotion` or `pickedUpPotion` mark those
+//             two cases.
 //   "pushed"  the player pushed a stack (also carries `height` and `drops`).
 //   "refused" nothing happened and no move was spent; `reason` says why.
 //   "died"    the player stepped into lava, infinite lava or off the board
@@ -168,6 +184,15 @@ function hasClosedBorder(state) {
 //             "lava", "abyss" (an infinite lava cell) or "edge" (off the grid).
 // options.lavaFatal (default true) chooses between the last two for lava: when
 // false, stepping into lava is refused instead of fatal.
+//
+// A carried potion buys exactly one otherwise-fatal step onto (finite) lava: the
+// step succeeds instead (the player ends up standing on the hazard) and the
+// potion is used up immediately, so it only ever protects the one step, never
+// two in a row (see README). It does not cover the abyss (infinite lava): that
+// stays an absolute hazard, so stepping into it is fatal (or refused, in gentle
+// mode) regardless of what's carried, and the potion is not spent trying. It
+// also doesn't cover walking off an unclosed board's edge: there's no cell
+// there to survive on.
 function move(state, directionName, options = {}) {
   const lavaFatal = options.lavaFatal !== false;
   const { dx, dy } = DIRECTIONS[directionName];
@@ -181,10 +206,22 @@ function move(state, directionName, options = {}) {
   if (!inBounds(state, nx, ny)) return intoLava("edge");
   const target = ny * state.cols + nx;
   if (state.walls[target]) return { result: "refused", reason: "wall", state };
-  if (isAbyss(state, target)) return intoLava("abyss");
-  const value = state.cells[target];
-  if (value < 0) return intoLava("lava");
-  if (value === 0) return { result: "moved", state: { ...state, player: target } };
+  const abyss = isAbyss(state, target);
+  if (abyss || state.cells[target] < 0) {
+    if (!abyss) {
+      const carried = state.carried || 0;
+      if (carried > 0) return { result: "moved", state: { ...state, player: target, carried: carried - 1 }, usedPotion: true };
+    }
+    return intoLava(abyss ? "abyss" : "lava");
+  }
+  if (state.cells[target] === 0) {
+    if (state.potions && state.potions[target]) {
+      const potions = state.potions.slice();
+      potions[target] = 0;
+      return { result: "moved", state: { ...state, player: target, potions, carried: (state.carried || 0) + 1 }, pickedUpPotion: true };
+    }
+    return { result: "moved", state: { ...state, player: target } };
+  }
   return pushStack(state, target, nx, ny, dx, dy);
 }
 
@@ -195,7 +232,9 @@ function move(state, directionName, options = {}) {
 // depth 0 is floor, the block used up), floor becomes a stack of 1, and a stack
 // gets 1 taller without toppling itself. A waterlogged block instead solidifies
 // lava outright, however deep (see README, "There will be mud"), and makes
-// whatever it lands on waterlogged in turn.
+// whatever it lands on waterlogged in turn. Potions are fragile: a block landing
+// on an uncollected one destroys it (it's never coming back, so a push that
+// buries one under a stack is a real, permanent loss, not just a visual quirk).
 function pushStack(state, target, nx, ny, dx, dy) {
   const height = state.cells[target];
   const sourceWet = Boolean(state.wet && state.wet[target]);
@@ -207,6 +246,7 @@ function pushStack(state, target, nx, ny, dx, dy) {
 
   const cells = state.cells.slice();
   const wet = state.wet ? state.wet.slice() : new Uint8Array(cells.length);
+  const potions = state.potions ? state.potions.slice() : new Uint8Array(cells.length);
   cells[target] = 0;
   wet[target] = 0;
   // Per block: the cell index it landed on, or -1 if it fell off the grid. A
@@ -244,9 +284,10 @@ function pushStack(state, target, nx, ny, dx, dy) {
       // Touching a waterlogged block waterlogs the rest of the stack (README); once
       // wet, a stack stays wet however much dry material later lands on it too.
       if (cells[landing] > 0) wet[landing] = existingWet || sourceWet ? 1 : 0;
+      if (potions && potions[landing]) potions[landing] = 0; // Smashed.
     }
   }
-  return { result: "pushed", state: { ...state, cells, wet, player: target }, height, drops };
+  return { result: "pushed", state: { ...state, cells, wet, potions, player: target }, height, drops };
 }
 
 // For each stack the player could push right now, where its blocks would land,

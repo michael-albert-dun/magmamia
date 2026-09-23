@@ -12,6 +12,21 @@ function svgElement(name, attributes, parent) {
   return element;
 }
 
+// One curved arm of the abyss's swirl (see renderCell): starts at radius `minR`
+// from the centre and spirals out to `maxR`, sweeping through `sweepTurns` of a
+// full rotation as it goes (1/3 makes a short, comma-shaped arm rather than a
+// full spiral coil).
+function abyssArmPoints(cx, cy, startAngle, minR, maxR, sweepTurns, steps = 12) {
+  const points = [];
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps;
+    const angle = startAngle + t * sweepTurns * Math.PI * 2;
+    const r = minR + t * (maxR - minR);
+    points.push(`${(cx + r * Math.cos(angle)).toFixed(1)},${(cy + r * Math.sin(angle)).toFixed(1)}`);
+  }
+  return points.join(" ");
+}
+
 // Draw the whole board as SVG into `svg`, replacing whatever was there. The
 // board is exactly the grid: its border cells are ordinary walls and infinite
 // lava, drawn like any other cell.
@@ -68,9 +83,21 @@ function renderCell(svg, s, index, left, top) {
     return;
   }
   if (s.abyss && s.abyss[index]) {
-    // Infinitely deep lava: like lava, marked with ∞ where real lava shows its depth.
-    svgElement("rect", { class: "cell-lava", ...box }, svg);
-    svgElement("text", { class: "cell-number on-abyss", x: centerX, y: centerY }, svg).textContent = "∞";
+    // The abyss: infinitely deep lava. Drawn as a dark, void-like square with a
+    // black-hole core and a few short white arms radiating out of it, not a shade
+    // of ordinary lava -- a potion won't save a step into it, so it needs to read
+    // as a different, absolute kind of hazard.
+    const group = svgElement("g", {}, svg);
+    svgElement("rect", { class: "cell-abyss", ...box }, group);
+    const arms = 5;
+    for (let a = 0; a < arms; a += 1) {
+      const startAngle = (a / arms) * Math.PI * 2;
+      svgElement("polyline", { class: "abyss-arm", points: abyssArmPoints(centerX, centerY, startAngle, 7, 17, 1 / 3) }, group);
+    }
+    // Drawn on top of the arms' inner ends, so a bigger core hides their point of
+    // convergence -- a small core left them meeting in a visible star shape.
+    svgElement("circle", { class: "abyss-core", cx: centerX, cy: centerY, r: 7 }, group);
+    svgElement("title", {}, group).textContent = "The abyss: infinite lava. Always fatal to step on, even with a potion.";
     return;
   }
   if (value < 0) {
@@ -83,10 +110,19 @@ function renderCell(svg, s, index, left, top) {
       const inset = 7;
       svgElement("rect", { class: wet ? "stack is-wet" : "stack", x: left + inset, y: top + inset, width: CELL - 2 * inset, height: CELL - 2 * inset, rx: 5 }, svg);
       svgElement("text", { class: wet ? "cell-number on-stack on-wet" : "cell-number on-stack", x: centerX, y: centerY }, svg).textContent = String(value);
+    } else if (s.potions && s.potions[index]) {
+      // A small flask: a narrow neck over a rounded body, distinct in shape (not
+      // just colour) from the stacks and lava it sits alongside.
+      const group = svgElement("g", { class: "potion" }, svg);
+      svgElement("rect", { x: centerX - 3, y: centerY - 15, width: 6, height: 8, rx: 1.5 }, group);
+      svgElement("rect", { x: centerX - 9, y: centerY - 8, width: 18, height: 17, rx: 6 }, group);
+      svgElement("title", {}, group).textContent = "A potion: one safe step onto lava, then it's used up (doesn't work on the abyss)";
     }
   }
   if (index === s.player) {
-    svgElement("circle", { class: "player", cx: centerX, cy: centerY, r: 15 }, svg);
+    const protectedByPotion = Boolean(s.carried > 0);
+    const player = svgElement("circle", { class: protectedByPotion ? "player is-protected" : "player", cx: centerX, cy: centerY, r: 15 }, svg);
+    if (protectedByPotion) svgElement("title", {}, player).textContent = "Protected: the next step onto lava (not the abyss) is safe";
   }
   // The crown goes last so it shows on top of lava, stacks and the player. With
   // a number in the middle it shrinks and moves up to sit above it.

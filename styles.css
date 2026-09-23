@@ -25,8 +25,24 @@
   --stack-wet-edge: #5c4620;
   --wall: #3b3f45;
   --player: #2b5fb4;
+  /* A green ring while a potion is carried -- easy to tell from the ordinary white
+     ring (and from the wall's neutral grey) since it isn't a hue-only distinction. */
+  --protected: #009e73;
   --crown: #f2b600;
   --crown-edge: #7a5a00;
+  /* Potions (an unnamed idea so far): reddish purple, an Okabe-Ito colour not used
+     anywhere else on the board, so it reads as its own thing even before the flask
+     shape registers. */
+  --potion: #cc79a7;
+  --potion-edge: #7a3f5b;
+  /* The abyss (infinite lava): a dark, space-like square with a black-hole core
+     and white radiating arms, rather than a shade of ordinary lava, since it's an
+     absolute hazard a potion can't buy a step onto, unlike finite lava. The swirl
+     is its own shape cue, not just a colour one. */
+  --abyss: #221a3d;
+  --abyss-edge: #120e22;
+  --abyss-core: #000000;
+  --abyss-arm: #ffffff;
 }
 
 * {
@@ -131,11 +147,24 @@ textarea {
   fill: #ffffff;
 }
 
-.cell-number.on-abyss {
-  fill: #ffffff;
-  fill-opacity: 0.7;
-  font-size: 24px;
-  font-weight: 400;
+.cell-abyss {
+  fill: var(--abyss);
+  stroke: var(--abyss-edge);
+  stroke-width: 1;
+}
+
+.abyss-arm {
+  fill: none;
+  stroke: var(--abyss-arm);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.abyss-core {
+  fill: var(--abyss-core);
+  pointer-events: none;
 }
 
 .cell-number.on-stack {
@@ -155,10 +184,20 @@ textarea {
   pointer-events: none;
 }
 
+.potion rect {
+  fill: var(--potion);
+  stroke: var(--potion-edge);
+  stroke-width: 1.5;
+}
+
 .player {
   fill: var(--player);
   stroke: #ffffff;
   stroke-width: 3;
+}
+
+.player.is-protected {
+  stroke: var(--protected);
 }
 
 .status {
