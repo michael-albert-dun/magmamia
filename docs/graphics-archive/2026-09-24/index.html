@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Magma Mia! — graphics archive, 2026-09-24</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Just enough page chrome to see the board -- everything board-related
+       comes from the frozen styles.css/render.js next to this file. */
+    body {
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: var(--page-bg);
+    }
+  </style>
+</head>
+
+<body>
+  <svg id="board" class="board"></svg>
+
+  <script src="render.js"></script>
+  <script>
+    // A frozen sample board, not a real level -- just enough to show every
+    // piece this snapshot is here to remember: the abyss and wall border,
+    // three lava depths, a dry and a waterlogged stack, a potion, the player,
+    // and both crown variants (bare, and shrunk above a number). Written in
+    // the same tiny text format engine.js's parseLevel reads; reproduced
+    // here (trimmed to only what this sample uses) so the archive doesn't
+    // depend on engine.js, which isn't part of what's being archived and may
+    // change shape independently of the graphics.
+    const SAMPLE_TEXT = [
+      "#~~~~~~#",
+      "~.a.A.b~",
+      "~.@.K*.c~",
+      "~.*.#.!.~",
+      "#~~~~~~#"
+    ].join("\n");
+
+    function parseSample(text) {
+      const lines = text.split("\n");
+      const cells = [], walls = [], abyss = [], goals = [], wet = [], potions = [];
+      let player = -1, cols = null;
+      lines.forEach((line, y) => {
+        let x = 0;
+        for (let i = 0; i < line.length; i += 1, x += 1) {
+          const ch = line[i];
+          const goal = line[i + 1] === "*";
+          if (goal) i += 1;
+          let value = 0, wall = 0, deep = 0, soggy = 0, potion = 0;
+          if (ch === ".") { /* floor */ }
+          else if (ch === "!") potion = 1;
+          else if (ch === "#") wall = 1;
+          else if (ch === "~") deep = 1;
+          else if (ch === "@") { player = cells.length; }
+          else if (ch >= "a" && ch <= "z") value = -(ch.charCodeAt(0) - 96);
+          else if (ch >= "A" && ch <= "J") value = ch.charCodeAt(0) - 64;
+          else if (ch >= "K" && ch <= "T") { value = ch.charCodeAt(0) - 74; soggy = 1; }
+          cells.push(value); walls.push(wall); abyss.push(deep);
+          goals.push(goal ? 1 : 0); wet.push(soggy); potions.push(potion);
+        }
+        cols = cols === null ? x : cols;
+      });
+      return { rows: lines.length, cols, cells, walls, abyss, goals, wet, potions, carried: 0, player };
+    }
+
+    drawBoard(document.querySelector("#board"), parseSample(SAMPLE_TEXT));
+  </script>
+</body>
+
+</html>

@@ -1,5 +1,19 @@
-// Board drawing shared by the player-facing game (play.js) and the test bench
-// (bench.js). Needs no state of its own: give it an SVG element and a state.
+// PROPOSAL (2026-09-24, "soft-texture v1"): working off the original design
+// (not the blocky JRPG-v1 proposal, which read as too old-school) -- same
+// shapes as the live game, plus a first pass at three things: a bit of
+// texture in the colours (soft diagonal gradients on every fill, and a grain
+// overlay across the whole board), softened edges on raised pieces (bigger
+// corner radii on stacks/potions, a soft drop shadow so they lift off the
+// tile), and rough, uneven edges on walls and lava so the board's underlying
+// grid is sensed rather than drawn as lines. The abyss stays sharp on
+// purpose -- Michael's call, it's thematic (an absolute hazard, not a soft
+// one) -- so it keeps its original crisp arms untouched by any of this. Not
+// wired into the live game -- see this folder's index.html for a static
+// sample board.
+//
+// Structurally a copy of src/render.js: the diffs are the new drawDefs
+// function, its call and the grain overlay in drawBoard, and the added
+// `url(#...)` fills / filter classes through renderCell.
 const SVG_NS = "http://www.w3.org/2000/svg";
 const CELL = 48;
 const MIN_CELL_PX = 28; // Below this the board scrolls instead of shrinking.
@@ -57,6 +71,56 @@ function abyssArmPoints(cx, cy, startAngle, minR, maxR, sweepTurns, steps = 12) 
   return points.join(" ");
 }
 
+// Every fill on the board is a soft diagonal gradient (a lighter tone top-left
+// fading to the plain base colour bottom-right) rather than one flat colour --
+// most of "a bit of texturing", along with the grain overlay drawBoard adds
+// afterwards. `defs` elements only need to exist somewhere in the document by
+// the time something references them, so this runs once up front rather than
+// needing to interleave with each cell.
+const GRADIENTS = [
+  ["lava-gradient", "var(--lava-light)", "var(--lava-edge)"],
+  ["floor-gradient", "var(--floor-light)", "var(--floor)"],
+  ["goal-floor-gradient", "var(--goal-floor-light)", "var(--goal-floor)"],
+  ["wall-gradient", "var(--wall-light)", "var(--wall)"],
+  ["stack-gradient", "var(--stack-light)", "var(--stack)"],
+  ["stack-wet-gradient", "var(--stack-wet-light)", "var(--stack-wet)"],
+  ["abyss-gradient", "var(--abyss-light)", "var(--abyss)"]
+];
+
+function drawDefs(svg) {
+  const defs = svgElement("defs", {}, svg);
+  for (const [id, from, to] of GRADIENTS) {
+    const gradient = svgElement("linearGradient", { id, x1: "0%", y1: "0%", x2: "100%", y2: "100%" }, defs);
+    svgElement("stop", { offset: "0%", style: `stop-color:${from}` }, gradient);
+    svgElement("stop", { offset: "100%", style: `stop-color:${to}` }, gradient);
+  }
+  // A fractal-noise filter, turned into alpha-only black grain (feColorMatrix
+  // zeroes the colour channels and derives alpha from the noise) -- painted
+  // as one rect covering the whole board with mix-blend-mode: overlay (see
+  // .board-grain in styles.css), rather than per tile, since the pattern is
+  // continuous and one element is far cheaper than one per cell.
+  const grain = svgElement("filter", { id: "grain" }, defs);
+  svgElement("feTurbulence", { type: "fractalNoise", baseFrequency: "0.85", numOctaves: "2", stitchTiles: "stitch", result: "noise" }, grain);
+  svgElement("feColorMatrix", { in: "noise", type: "matrix", values: "0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1 0 0 0 0" }, grain);
+  // A small, soft drop shadow for raised pieces (stacks, potions, the crown,
+  // the player) -- part of "softened edges": a piece lifts gently off the
+  // tile instead of meeting it at a hard line.
+  const shadow = svgElement("filter", { id: "soft-shadow", x: "-50%", y: "-50%", width: "200%", height: "200%" }, defs);
+  svgElement("feDropShadow", { dx: 0, dy: 1.5, stdDeviation: 1.2, "flood-color": "#000000", "flood-opacity": 0.35 }, shadow);
+  // Rough, uneven edges for walls and lava (see .cell-wall/.cell-lava in
+  // styles.css) -- feDisplacementMap nudges the rect's own boundary around
+  // according to a noise field, rather than leaving it a perfect rectangle.
+  // One shared filter for every wall/lava tile: feTurbulence's noise is
+  // sampled in absolute board coordinates (not per-element), so two tiles
+  // that touch get displaced consistently at their shared edge -- a run of
+  // wall or lava reads as one rough-hewn shape, not a stack of separately
+  // jittered squares, which is what makes the grid legible (an irregular
+  // outline breaks the perfect tiling) without drawing grid lines over it.
+  const rough = svgElement("filter", { id: "rough-edge", x: "-15%", y: "-15%", width: "130%", height: "130%" }, defs);
+  svgElement("feTurbulence", { type: "fractalNoise", baseFrequency: "0.06", numOctaves: "2", seed: "3", result: "noise" }, rough);
+  svgElement("feDisplacementMap", { in: "SourceGraphic", in2: "noise", scale: "5", xChannelSelector: "R", yChannelSelector: "G" }, rough);
+}
+
 // Draw the whole board as SVG into `svg`, replacing whatever was there. The
 // board is exactly the grid: its border cells are ordinary walls and infinite
 // lava, drawn like any other cell.
@@ -72,6 +136,7 @@ function drawBoard(svg, s, options = {}) {
   svg.setAttribute("aria-label", `Game board, ${s.rows} rows by ${s.cols} columns`);
   svg.style.maxWidth = `${width}px`;
   svg.style.minWidth = `${Math.min(width, s.cols * MIN_CELL_PX)}px`;
+  drawDefs(svg);
 
   for (let y = 0; y < s.rows; y += 1) {
     for (let x = 0; x < s.cols; x += 1) {
@@ -79,6 +144,7 @@ function drawBoard(svg, s, options = {}) {
     }
   }
   drawChips(svg, options.chips || []);
+  svgElement("rect", { class: "board-grain", x: 0, y: 0, width, height }, svg);
 }
 
 // Small "+n" tags in a cell's bottom-right corner, so they leave the cell's own
@@ -143,14 +209,14 @@ function renderCell(svg, s, index, left, top) {
     if (value > 0) {
       const wet = Boolean(s.wet && s.wet[index]);
       const inset = 7;
-      svgElement("rect", { class: wet ? "stack is-wet" : "stack", x: left + inset, y: top + inset, width: CELL - 2 * inset, height: CELL - 2 * inset, rx: 5 }, svg);
+      svgElement("rect", { class: wet ? "stack is-wet" : "stack", x: left + inset, y: top + inset, width: CELL - 2 * inset, height: CELL - 2 * inset, rx: 9 }, svg);
       svgElement("text", { class: wet ? "cell-number on-stack on-wet" : "cell-number on-stack", x: centerX, y: centerY }, svg).textContent = String(value);
     } else if (s.potions && s.potions[index]) {
       // A small flask: a narrow neck over a rounded body, distinct in shape (not
       // just colour) from the stacks and lava it sits alongside.
       const group = svgElement("g", { class: "potion" }, svg);
-      svgElement("rect", { x: centerX - 3, y: centerY - 15, width: 6, height: 8, rx: 1.5 }, group);
-      svgElement("rect", { x: centerX - 9, y: centerY - 8, width: 18, height: 17, rx: 6 }, group);
+      svgElement("rect", { x: centerX - 3, y: centerY - 15, width: 6, height: 8, rx: 2.5 }, group);
+      svgElement("rect", { x: centerX - 9, y: centerY - 8, width: 18, height: 17, rx: 8.5 }, group);
       svgElement("title", {}, group).textContent = "A potion: one safe step onto lava, then it's used up (doesn't work on the abyss)";
     }
   }

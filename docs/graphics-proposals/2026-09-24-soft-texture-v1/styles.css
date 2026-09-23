@@ -10,20 +10,30 @@
      differ strongly in lightness (not just hue) and stay distinguishable for
      colour-blind players. They also differ in shape: lava fills its cell,
      stacks sit inset on floor. The floor is a very pale blue-grey and the goal
-     floor is teal, kept well away from the beige of the stacks that can cover it. */
+     floor is teal, kept well away from the beige of the stacks that can cover it.
+     PROPOSAL: every fill now also has a -light variant, the lighter stop in a
+     soft top-left-to-bottom-right gradient (see GRADIENTS in render.js) --
+     texture in place of a flat colour, without the harder pixel-bevel banding
+     the JRPG-v1 proposal used. */
   --floor: #dbe5ef;
+  --floor-light: #eef3f8;
   --floor-edge: #c1cfdd;
   --goal-floor: #8fcac4;
+  --goal-floor-light: #b6e0da;
   --lava: #b3261e;
+  --lava-light: #c24f45;
   --lava-edge: #8a1c16;
   --stack: #e2c47f;
+  --stack-light: #f0dca8;
   --stack-edge: #a5803c;
   /* Waterlogged blocks ("There will be mud"): the same sandy hue, darkened like wet
      sand, so wet and dry read as the same material in two states, not two materials.
      Revisit alongside the brown/red colourblind check once the mechanic settles. */
   --stack-wet: #8a6b3a;
+  --stack-wet-light: #a9855a;
   --stack-wet-edge: #5c4620;
   --wall: #3b3f45;
+  --wall-light: #565b63;
   /* The player: a small blocky, early-RPG-inspired sprite -- a traveller, not
      a particular person, so the face is bare (no hairstyle) with a plain cap
      rather than anything read as one gender or another. --player is the tan
@@ -45,6 +55,7 @@
      absolute hazard a potion can't buy a step onto, unlike finite lava. The swirl
      is its own shape cue, not just a colour one. */
   --abyss: #221a3d;
+  --abyss-light: #382c5e;
   --abyss-edge: #120e22;
   --abyss-core: #000000;
   --abyss-arm: #ffffff;
@@ -107,22 +118,40 @@ textarea {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  position: relative; /* So .board-grain's overlay sits correctly with the rest. */
+}
+
+/* PROPOSAL: a faint grain overlay across the whole board (see the #grain
+   filter and the .board-grain rect drawBoard appends last in render.js) --
+   the other half of "a bit of texturing", alongside the gradients below. */
+.board-grain {
+  fill: #000000;
+  filter: url(#grain);
+  mix-blend-mode: overlay;
+  opacity: 0.28;
+  pointer-events: none;
 }
 
 .cell-floor {
-  fill: var(--floor);
+  fill: url(#floor-gradient);
 }
 
 .cell-floor.is-goal {
-  fill: var(--goal-floor);
+  fill: url(#goal-floor-gradient);
 }
 
+/* Walls and lava get rough, uneven edges (see the #rough-edge filter in
+   render.js) rather than a perfect rectangle -- so a run of them reads as an
+   eroded, hand-hewn shape and the board's grid is sensed at the seams
+   between different tiles, without ever drawing a grid line. */
 .cell-lava {
-  fill: var(--lava);
+  fill: url(#lava-gradient);
+  filter: url(#rough-edge);
 }
 
 .cell-wall {
-  fill: var(--wall);
+  fill: url(#wall-gradient);
+  filter: url(#rough-edge);
 }
 
 /* The "solved" indicator: the border -- walls and the abyss alike -- fades
@@ -139,13 +168,14 @@ textarea {
 }
 
 .stack {
-  fill: var(--stack);
+  fill: url(#stack-gradient);
   stroke: var(--stack-edge);
   stroke-width: 2;
+  filter: url(#soft-shadow);
 }
 
 .stack.is-wet {
-  fill: var(--stack-wet);
+  fill: url(#stack-wet-gradient);
   stroke: var(--stack-wet-edge);
 }
 
@@ -162,7 +192,7 @@ textarea {
 }
 
 .cell-abyss {
-  fill: var(--abyss);
+  fill: url(#abyss-gradient);
   stroke: var(--abyss-edge);
   stroke-width: 1;
 }
@@ -196,12 +226,21 @@ textarea {
   stroke-width: 1.5;
   stroke-linejoin: round;
   pointer-events: none;
+  filter: url(#soft-shadow);
+}
+
+.potion {
+  filter: url(#soft-shadow);
 }
 
 .potion rect {
   fill: var(--potion);
   stroke: var(--potion-edge);
   stroke-width: 1.5;
+}
+
+.player {
+  filter: url(#soft-shadow);
 }
 
 .player rect {

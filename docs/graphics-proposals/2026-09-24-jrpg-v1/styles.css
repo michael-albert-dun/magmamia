@@ -10,20 +10,33 @@
      differ strongly in lightness (not just hue) and stay distinguishable for
      colour-blind players. They also differ in shape: lava fills its cell,
      stacks sit inset on floor. The floor is a very pale blue-grey and the goal
-     floor is teal, kept well away from the beige of the stacks that can cover it. */
+     floor is teal, kept well away from the beige of the stacks that can cover it.
+     PROPOSAL: every "block" tile (floor, wall, stack) now also gets a lighter
+     -highlight and reuses its existing -edge as a shadow, for the pixel bevel
+     in render.js's pixelBevel -- lit from the top-left, like most retro tile
+     sets. "Hole" tiles (lava, the abyss) keep just one -edge/-frame tone,
+     since pixelFrame reads as recessed rather than raised. */
   --floor: #dbe5ef;
+  --floor-highlight: #eef3f8;
   --floor-edge: #c1cfdd;
   --goal-floor: #8fcac4;
+  --goal-floor-highlight: #b6e0da;
+  --goal-floor-edge: #5fa39c;
   --lava: #b3261e;
   --lava-edge: #8a1c16;
+  --lava-hot: #f07d3c; /* The mottled "hot spot" specks (see lavaSpecks). */
   --stack: #e2c47f;
+  --stack-highlight: #f0dca8;
   --stack-edge: #a5803c;
   /* Waterlogged blocks ("There will be mud"): the same sandy hue, darkened like wet
      sand, so wet and dry read as the same material in two states, not two materials.
      Revisit alongside the brown/red colourblind check once the mechanic settles. */
   --stack-wet: #8a6b3a;
+  --stack-wet-highlight: #a9855a;
   --stack-wet-edge: #5c4620;
   --wall: #3b3f45;
+  --wall-highlight: #565b63;
+  --wall-edge: #24262a;
   /* The player: a small blocky, early-RPG-inspired sprite -- a traveller, not
      a particular person, so the face is bare (no hairstyle) with a plain cap
      rather than anything read as one gender or another. --player is the tan
@@ -35,6 +48,7 @@
   --player-skin: #f0c9a0;
   --crown: #f2b600;
   --crown-edge: #7a5a00;
+  --crown-jewel: #2b5fb4; /* The player's old blue, free since it moved to a tan robe -- recycled as a sapphire. */
   /* Potions (an unnamed idea so far): reddish purple, an Okabe-Ito colour not used
      anywhere else on the board, so it reads as its own thing even before the flask
      shape registers. */
@@ -109,29 +123,91 @@ textarea {
   touch-action: manipulation;
 }
 
+/* PROPOSAL: crisp pixel-bevel tiles throughout (see pixelBevel/pixelFrame in
+   render.js) instead of flat fills -- everything below down to .potion rect
+   replaces the old flat-fill rules. Rects, not the rounded/stroked shapes
+   the live game still uses. */
+
+.cell-floor,
+.cell-floor-highlight,
+.cell-floor-shadow,
+.cell-wall,
+.cell-wall-highlight,
+.cell-wall-shadow,
+.cell-lava,
+.cell-lava-frame,
+.cell-lava-hot,
+.cell-abyss,
+.cell-abyss-frame,
+.stack,
+.stack-highlight,
+.stack-shadow,
+.crown-band,
+.crown-point,
+.crown-jewel {
+  shape-rendering: crispEdges;
+}
+
 .cell-floor {
   fill: var(--floor);
+}
+
+.cell-floor-highlight {
+  fill: var(--floor-highlight);
+}
+
+.cell-floor-shadow {
+  fill: var(--floor-edge);
 }
 
 .cell-floor.is-goal {
   fill: var(--goal-floor);
 }
 
+.cell-floor-highlight.is-goal {
+  fill: var(--goal-floor-highlight);
+}
+
+.cell-floor-shadow.is-goal {
+  fill: var(--goal-floor-edge);
+}
+
 .cell-lava {
   fill: var(--lava);
+}
+
+.cell-lava-frame {
+  fill: var(--lava-edge);
+}
+
+.cell-lava-hot {
+  fill: var(--lava-hot);
 }
 
 .cell-wall {
   fill: var(--wall);
 }
 
+.cell-wall-highlight {
+  fill: var(--wall-highlight);
+}
+
+.cell-wall-shadow {
+  fill: var(--wall-edge);
+}
+
 /* The "solved" indicator: the border -- walls and the abyss alike -- fades
    away to reveal the floor rect drawn underneath each one (see renderCell in
    render.js), rather than only a status line saying so. Toggled on the board
    itself (see play.js), so it applies to every border cell without needing
-   to single out which ones are actually on the ring. */
+   to single out which ones are actually on the ring. Every piece of a wall's
+   or the abyss's pixel art needs to be listed, not just its base fill, or
+   the bevel/frame/arms would be left behind after the base faded. */
 .board.is-solved .cell-wall,
+.board.is-solved .cell-wall-highlight,
+.board.is-solved .cell-wall-shadow,
 .board.is-solved .cell-abyss,
+.board.is-solved .cell-abyss-frame,
 .board.is-solved .abyss-arm,
 .board.is-solved .abyss-core {
   opacity: 0;
@@ -140,13 +216,26 @@ textarea {
 
 .stack {
   fill: var(--stack);
-  stroke: var(--stack-edge);
-  stroke-width: 2;
+}
+
+.stack-highlight {
+  fill: var(--stack-highlight);
+}
+
+.stack-shadow {
+  fill: var(--stack-edge);
 }
 
 .stack.is-wet {
   fill: var(--stack-wet);
-  stroke: var(--stack-wet-edge);
+}
+
+.stack-highlight.is-wet {
+  fill: var(--stack-wet-highlight);
+}
+
+.stack-shadow.is-wet {
+  fill: var(--stack-wet-edge);
 }
 
 .cell-number {
@@ -163,16 +252,14 @@ textarea {
 
 .cell-abyss {
   fill: var(--abyss);
-  stroke: var(--abyss-edge);
-  stroke-width: 1;
+}
+
+.cell-abyss-frame {
+  fill: var(--abyss-edge);
 }
 
 .abyss-arm {
-  fill: none;
-  stroke: var(--abyss-arm);
-  stroke-width: 2;
-  stroke-linecap: round;
-  opacity: 0.85;
+  fill: var(--abyss-arm);
   pointer-events: none;
 }
 
@@ -191,11 +278,19 @@ textarea {
 }
 
 .crown {
-  fill: var(--crown);
-  stroke: var(--crown-edge);
-  stroke-width: 1.5;
-  stroke-linejoin: round;
   pointer-events: none;
+}
+
+.crown-band {
+  fill: var(--crown-edge);
+}
+
+.crown-point {
+  fill: var(--crown);
+}
+
+.crown-jewel {
+  fill: var(--crown-jewel);
 }
 
 .potion rect {
