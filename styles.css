@@ -106,8 +106,6 @@ textarea {
 
 .cell-floor {
   fill: var(--floor);
-  stroke: var(--floor-edge);
-  stroke-width: 1;
 }
 
 .cell-floor.is-goal {
@@ -116,12 +114,23 @@ textarea {
 
 .cell-lava {
   fill: var(--lava);
-  stroke: var(--lava-edge);
-  stroke-width: 1;
 }
 
 .cell-wall {
   fill: var(--wall);
+}
+
+/* The "solved" indicator: the border -- walls and the abyss alike -- fades
+   away to reveal the floor rect drawn underneath each one (see renderCell in
+   render.js), rather than only a status line saying so. Toggled on the board
+   itself (see play.js), so it applies to every border cell without needing
+   to single out which ones are actually on the ring. */
+.board.is-solved .cell-wall,
+.board.is-solved .cell-abyss,
+.board.is-solved .abyss-arm,
+.board.is-solved .abyss-core {
+  opacity: 0;
+  transition: opacity 900ms ease;
 }
 
 .stack {
@@ -203,6 +212,7 @@ textarea {
 .status {
   min-height: 1.5em;
   margin: 8px 0;
+  text-align: center;
 }
 
 .status.is-won {
@@ -219,6 +229,7 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 10px 16px;
 }
 
@@ -236,6 +247,8 @@ textarea {
   cursor: default;
 }
 
+/* Only bench.html (the developer's test bench) still has a dpad -- the
+   player-facing game dropped it (keyboard/WASD and tap-to-move cover it). */
 .dpad {
   display: grid;
   grid-template-columns: repeat(3, 44px);
@@ -341,6 +354,27 @@ code {
   font-size: 1.5rem;
 }
 
+/* The play screen's header: back-button and info-button pinned to the two
+   symmetric outer columns, so the title lands truly centered regardless of
+   how wide either button is (not just centered within a left-hand group). */
+.game-header-centered {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+
+.game-header-centered h1 {
+  grid-column: 2;
+  text-align: center;
+}
+
+.game-header-centered > .text-button {
+  justify-self: start;
+}
+
+.game-header-centered > .icon-button {
+  justify-self: end;
+}
+
 .header-left {
   display: flex;
   align-items: center;
@@ -355,6 +389,11 @@ code {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+
+.text-button.icon-only {
+  padding: 6px 10px;
+  font-size: 1.1rem;
 }
 
 .text-button:hover {
@@ -405,16 +444,155 @@ code {
   font-size: 0.85rem;
 }
 
-/* Level-select screen: a grid of level buttons within one set. */
+/* The splash screen, Seize the Crown's real front page: just the hero, with a
+   button leading straight into play (see #splash-screen in index.html). Dark
+   and lit like the abyss itself (reusing its own colour tokens), with the
+   crown's gold for the title and the one phrase worth calling out in the
+   tagline. */
 
-.levels-grid {
+.splash {
+  display: grid;
+  justify-items: center;
+  padding-top: min(12vh, 80px);
+}
+
+.splash[hidden] {
+  /* .splash's own `display: grid` above is an author rule, which beats the
+     browser's default `[hidden] { display: none }` even with `hidden` set --
+     without this override the splash screen stayed visible over every other
+     screen once you were in the dungeon. */
+  display: none;
+}
+
+.hero {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 28px 20px 30px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--abyss) 0%, var(--abyss-edge) 100%);
+  box-shadow: 0 18px 46px rgba(42, 38, 34, 0.22);
+}
+
+.enter-button {
+  margin-top: 4px;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 999px;
+  background: var(--crown);
+  color: #4a3512;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+  transition: transform 140ms ease;
+}
+
+.enter-button:hover {
+  transform: translateY(-2px);
+}
+
+.hero-art {
+  width: min(100%, 260px);
+  height: auto;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+}
+
+.hero-title {
+  margin: 0;
+  font-size: clamp(2rem, 8vw, 3rem);
+  font-weight: 780;
+  line-height: 0.95;
+  color: var(--crown);
+  text-shadow: 0 2px 0 var(--crown-edge), 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.hero-tagline {
+  margin: 0;
+  max-width: 46ch;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.hero-tagline strong {
+  color: var(--crown);
+}
+
+/* A two-sided queue of level buttons within one set -- up to 9 locked button
+   positions, the current level centred by default (fewer than 4 to one side,
+   e.g. near level 1, just shifts the window so it starts there instead). The
+   triangle buttons jump straight to the far end in one press rather than
+   paging gradually -- there's only ever "as far left/right as possible" to
+   go, not intermediate stops -- and are hidden entirely once that end is
+   already fully in view. No scrolling: exactly the levels in the current
+   window are rendered, so the strip's own width never exceeds 9 buttons. */
+
+.level-queue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   margin-top: 4px;
 }
 
+.queue-nav {
+  flex: none;
+  width: 30px;
+  height: 36px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.levels-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 6px 16px;
+}
+
 .levels-grid .level-button {
-  min-width: 44px;
+  flex: none;
+  width: 44px;
   height: 44px;
   font-size: 1.05rem;
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+
+/* Played only on the buttons that just slid into view after a triangle-button
+   press (see the `direction` argument to renderLevelQueue in play.js) --
+   an ordinary re-render (e.g. after a move) passes no direction and gets no
+   animation, since the window hasn't changed. */
+@keyframes queue-enter-from-left {
+  from { transform: translateX(-16px); opacity: 0; }
+}
+@keyframes queue-enter-from-right {
+  from { transform: translateX(16px); opacity: 0; }
+}
+.levels-grid .level-button.enter-left {
+  animation: queue-enter-from-left 180ms ease;
+}
+.levels-grid .level-button.enter-right {
+  animation: queue-enter-from-right 180ms ease;
+}
+
+.levels-grid .level-button.is-solved {
+  opacity: 0.55;
+  transform: scale(0.82);
+}
+
+.levels-grid .level-button.is-current {
+  transform: scale(1.18);
+  background: var(--goal-floor);
+  border-color: var(--crown-edge);
+  box-shadow: 0 4px 10px rgba(42, 38, 34, 0.22);
 }
 
 .icon-button {
@@ -455,13 +633,6 @@ code {
   align-items: center;
   gap: 8px;
   margin: 0;
-}
-
-.level-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
 }
 
 .level-button {

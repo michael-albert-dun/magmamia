@@ -79,6 +79,10 @@ function renderCell(svg, s, index, left, top) {
   const box = { x: left, y: top, width: CELL, height: CELL };
 
   if (s.walls[index]) {
+    // A floor rect sits underneath, hidden until "solved" fades the wall out
+    // (see .board.is-solved in styles.css) -- otherwise fading it would just
+    // reveal the page behind the board instead of melting into floor.
+    svgElement("rect", { class: "cell-floor", ...box }, svg);
     svgElement("rect", { class: "cell-wall", ...box }, svg);
     return;
   }
@@ -87,6 +91,7 @@ function renderCell(svg, s, index, left, top) {
     // black-hole core and a few short white arms radiating out of it, not a shade
     // of ordinary lava -- a potion won't save a step into it, so it needs to read
     // as a different, absolute kind of hazard.
+    svgElement("rect", { class: "cell-floor", ...box }, svg); // Same reason as the wall above.
     const group = svgElement("g", {}, svg);
     svgElement("rect", { class: "cell-abyss", ...box }, group);
     const arms = 5;

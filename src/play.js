@@ -1,16 +1,20 @@
-// The player-facing game: three screens, switched by state.view -- a home screen
-// listing every set of levels (Michael's own review tool, at ?set=home -- not
-// part of the real front page, see below), a level-select grid within whichever
-// set was chosen (or linked to with ?set=), and the board itself. The rules
-// (move, previewPushes, isWon, ...) are in engine.js, the levels in levels.js
-// and the board drawing (drawBoard, CELL) in render.js, all loaded before this
-// file. bench.html is the developer's test bench, this is the game.
+// The player-facing game: four screens, switched by state.view -- a splash
+// (Seize the Crown's own front page, see below), a home screen listing every
+// set of levels (Michael's own review tool, at ?set=home -- not part of the
+// real front page), a level-select grid within whichever set was chosen (or
+// linked to with ?set=), and the board itself (which also carries its own
+// level queue, for jumping around without leaving it). The rules (move,
+// previewPushes, isWon, ...) are in engine.js, the levels in levels.js and the
+// board drawing (drawBoard, CELL) in render.js, all loaded
+// before this file. bench.html is the developer's test bench, this is the game.
 //
-// A bare link (no ?set=) is the real front page: Seize the Crown's level-select
-// screen, directly, the way it worked before the home screen existed. Every
-// other set (dancefloor, mud, potions, the bridge generator) is still live and
-// reachable by anyone who knows the URL -- there's no backend to actually hide
-// anything behind -- it's just not what a visitor lands on or is shown a link to.
+// A bare link (no ?set=) is the real front page: the splash, with "Enter the
+// dungeon!" leading into Seize the Crown directly (skipping the level-select
+// grid, which the play screen's own queue makes largely redundant for it).
+// Every other set (dancefloor, mud, potions, the bridge generator) is still
+// live and reachable by anyone who knows the URL -- there's no backend to
+// actually hide anything behind -- it's just not what a visitor lands on or is
+// shown a link to.
 const KEY_DIRECTIONS = {
   ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
   w: "up", s: "down", a: "left", d: "right",
@@ -68,6 +72,21 @@ function requestedSetParam() {
 const GENTLE_KEY = "magmamia.gentle.v1";
 const PREVIEW_KEY = "magmamia.preview.v1";
 
+// How many level buttons the queue strip shows at once, and how far a
+// triangle-button press shifts it (see renderLevelQueue): half the window, so
+// one press moves the level that was in the middle to whichever end was
+// pressed.
+const QUEUE_WINDOW_SIZE = 9;
+const QUEUE_STEP = Math.floor(QUEUE_WINDOW_SIZE / 2);
+
+// A tiny, real level for the splash screen's hero art -- playable with the
+// actual engine, not decoration. Push the block up into the magma to bridge
+// it, then step across to the crown; the wall under the crown blocks the
+// direct route, forcing the detour. Dying (stepping straight into the magma)
+// just restarts it, same as any level.
+const SPLASH_LEVEL_TEXT = ".a.*\n.A#\n@..";
+const splash = { current: parseLevel(SPLASH_LEVEL_TEXT) };
+
 const state = {
   view: "home", // "home" (pick a set), "levels" (pick a level within one) or "play".
   setKey: null, // Which of ALL_SETS is open, or null on the home screen.
@@ -99,6 +118,9 @@ function firstUnsolvedLevel() {
 }
 
 const elements = {
+  splashScreen: document.querySelector("#splash-screen"),
+  splashArt: document.querySelector("#splash-art"),
+  enterDungeonButton: document.querySelector("#enter-dungeon-button"),
   homeScreen: document.querySelector("#home-screen"),
   modeList: document.querySelector("#mode-list"),
   levelsScreen: document.querySelector("#levels-screen"),
@@ -107,8 +129,13 @@ const elements = {
   levelsTitle: document.querySelector("#levels-title"),
   levelsSubtitle: document.querySelector("#levels-subtitle"),
   levelsGrid: document.querySelector("#levels-grid"),
+  levelsQueuePrev: document.querySelector("#levels-queue-prev"),
+  levelsQueueNext: document.querySelector("#levels-queue-next"),
   playScreen: document.querySelector("#play-screen"),
   playLevelsButton: document.querySelector("#play-levels-button"),
+  playLevelsGrid: document.querySelector("#play-levels-grid"),
+  playQueuePrev: document.querySelector("#play-queue-prev"),
+  playQueueNext: document.querySelector("#play-queue-next"),
   infoButton: document.querySelector("#info-button"),
   infoPanel: document.querySelector("#info-panel"),
   gentle: document.querySelector("#gentle-lava"),
@@ -118,7 +145,6 @@ const elements = {
   undo: document.querySelector("#undo-button"),
   restart: document.querySelector("#restart-button"),
   next: document.querySelector("#next-button"),
-  dpadButtons: [...document.querySelectorAll(".dpad button")],
   objectiveHelp: document.querySelector("#objective-help"),
   title: document.querySelector("#game-title")
 };
@@ -139,31 +165,72 @@ elements.preview.addEventListener("change", () => {
 elements.undo.addEventListener("click", undo);
 elements.restart.addEventListener("click", restart);
 elements.next.addEventListener("click", () => startLevel(state.levelIndex + 1));
-for (const button of elements.dpadButtons) {
-  button.addEventListener("click", () => attemptMove(button.dataset.dir));
-}
 elements.board.addEventListener("click", handleBoardClick);
+elements.splashArt.addEventListener("click", handleSplashBoardClick);
 elements.levelsHomeButton.addEventListener("click", goHome);
 elements.levelsContinueButton.addEventListener("click", () => startLevel(firstUnsolvedLevel()));
-elements.playLevelsButton.addEventListener("click", () => openLevels(state.setKey));
+// Crown's real home is the splash now, not the levels-select grid (its own
+// queue lives right here on the play screen); every other set still relies
+// on the levels-select screen, so it keeps going back there.
+elements.playLevelsButton.addEventListener("click", () => (state.setKey === "crown" ? showSplash() : openLevels(state.setKey)));
+elements.enterDungeonButton.addEventListener("click", () => startLevel(firstUnsolvedLevel()));
 document.addEventListener("keydown", handleKeyDown);
 
-// The real front page is just Seize the Crown -- a bare link (from the hub site,
-// or index.html with no query string) goes straight to it, the way it did
-// before the home screen existed. The home screen (every set, for Michael's own
-// review, not for a visitor) is reachable at ?set=home; an actual set still
-// opens directly at ?set=<key>, unchanged.
+// Declared here (rather than nearer the functions that use them) because the
+// routing block below calls showSplash()/openLevels() synchronously, during
+// this same initial pass through the script -- a `const` declared after that
+// point would still be in its temporal dead zone when a hoisted function
+// reached for it, throwing and silently aborting the rest of that render()
+// (this is exactly a bug that briefly shipped).
+const meltTimers = new WeakMap(); // board element -> pending setTimeout handle, if any.
+const queueWindows = new Map(); // level-queue container -> its own scroll window (see renderLevelQueue).
+
+// The real front page is Seize the Crown's splash -- a bare link (from the hub
+// site, or index.html with no query string) goes straight to it. The home
+// screen (every set, for Michael's own review, not for a visitor) is reachable
+// at ?set=home; an actual set still opens directly at ?set=<key>, unchanged.
 const requestedParam = requestedSetParam();
 if (requestedParam && ALL_SETS[requestedParam]) openLevels(requestedParam);
 else if (requestedParam === "home") goHome();
-else openLevels("crown");
+else showSplash();
 
-// --- Moving between the three screens ---------------------------------------
+// --- Moving between the four screens -----------------------------------------
+
+function showSplash() {
+  state.view = "splash";
+  state.setKey = "crown";
+  loadSetPreferences(); // So "Enter the dungeon!" resumes progress, not level 1 every time.
+  render();
+}
 
 function goHome() {
   state.view = "home";
   state.setKey = null;
   render();
+}
+
+// --- The splash screen's own tiny puzzle -------------------------------------
+
+function attemptSplashMove(directionName) {
+  if (isWon(splash.current, "reach")) return;
+  const outcome = move(splash.current, directionName, { lavaFatal: true });
+  if (outcome.result === "moved" || outcome.result === "pushed") splash.current = outcome.state;
+  else if (outcome.result === "died") splash.current = parseLevel(SPLASH_LEVEL_TEXT); // Just restart, no fuss.
+  renderSplash();
+}
+
+// A click on a square next to the player moves that way, same as the real board.
+function handleSplashBoardClick(event) {
+  const s = splash.current;
+  const rect = elements.splashArt.getBoundingClientRect();
+  const scale = (s.cols * CELL) / rect.width;
+  const x = Math.floor(((event.clientX - rect.left) * scale) / CELL);
+  const y = Math.floor(((event.clientY - rect.top) * scale) / CELL);
+  const dx = x - (s.player % s.cols);
+  const dy = y - Math.floor(s.player / s.cols);
+  if (Math.abs(dx) + Math.abs(dy) !== 1) return;
+  const directionName = Object.keys(DIRECTIONS).find((name) => DIRECTIONS[name].dx === dx && DIRECTIONS[name].dy === dy);
+  attemptSplashMove(directionName);
 }
 
 function openLevels(key) {
@@ -298,6 +365,14 @@ function handleKeyDown(event) {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   const tag = event.target.tagName;
   if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+  if (state.view === "splash") {
+    const splashDirection = KEY_DIRECTIONS[event.key];
+    if (splashDirection) {
+      event.preventDefault();
+      attemptSplashMove(splashDirection);
+    }
+    return;
+  }
   if (state.view !== "play") return;
   const directionName = KEY_DIRECTIONS[event.key];
   if (directionName) {
@@ -329,12 +404,40 @@ function handleBoardClick(event) {
 // --- Rendering ----------------------------------------------------------------
 
 function render() {
+  elements.splashScreen.hidden = state.view !== "splash";
   elements.homeScreen.hidden = state.view !== "home";
   elements.levelsScreen.hidden = state.view !== "levels";
   elements.playScreen.hidden = state.view !== "play";
-  if (state.view === "home") renderHome();
+  if (state.view === "splash") renderSplash();
+  else if (state.view === "home") renderHome();
   else if (state.view === "levels") renderLevels();
   else renderPlay();
+}
+
+function renderSplash() {
+  drawBoard(elements.splashArt, splash.current);
+  scheduleMelt(elements.splashArt, isWon(splash.current, "reach"));
+}
+
+// The "solved" indicator (see .board.is-solved in styles.css): the border --
+// walls and the abyss alike -- fades away, rather than only a status line
+// saying so. Delayed a beat rather than firing the instant the winning move
+// lands, so it reads as a reaction to the win, not part of the move itself.
+// (meltTimers itself is declared up near the top of the file -- see the
+// comment there for why.)
+function scheduleMelt(board, solved) {
+  const pending = meltTimers.get(board);
+  if (!solved) {
+    if (pending) clearTimeout(pending);
+    meltTimers.delete(board);
+    board.classList.remove("is-solved");
+    return;
+  }
+  if (pending || board.classList.contains("is-solved")) return;
+  meltTimers.set(board, setTimeout(() => {
+    board.classList.add("is-solved");
+    meltTimers.delete(board);
+  }, 500));
 }
 
 function renderHome() {
@@ -359,6 +462,69 @@ function renderHome() {
   }
 }
 
+// The queue's own window (which slice of the level list its up-to-9 locked
+// positions currently show) is kept separate from `state`, and keyed by
+// container, since the two queues (levels screen, play screen) browse
+// independently of each other. It re-centres on the current level whenever
+// that (or the level count) changes; otherwise it's left alone, so browsing
+// with the triangle buttons survives an unrelated re-render (e.g. a move on
+// the play screen doesn't snap the strip back to centre).
+function levelQueueWindow(container, currentIndex, total) {
+  const size = Math.min(QUEUE_WINDOW_SIZE, total);
+  const existing = queueWindows.get(container);
+  if (existing && existing.currentIndex === currentIndex && existing.total === total) return existing;
+  const half = Math.floor(size / 2);
+  const start = Math.max(0, Math.min(currentIndex - half, total - size));
+  const win = { start, currentIndex, total };
+  queueWindows.set(container, win);
+  return win;
+}
+
+// Shared by the levels screen and the panel under the board on the play
+// screen. "Current" means different things in each: on the levels screen (not
+// playing yet) it's a suggestion, the first unsolved level; on the play
+// screen it's simply whichever level is actually open right now.
+//
+// Up to 9 locked button positions, the current level centred by default (see
+// levelQueueWindow). A triangle-button press shifts the window by
+// QUEUE_STEP (4) -- moving the level that was in the middle to that end of
+// the strip -- clamped so it never runs past the first or last level, and
+// each triangle hides itself once its end is already fully in view.
+// `direction` is set only when this call is itself the result of such a
+// press, so the freshly revealed buttons can slide in (see the
+// .enter-left/.enter-right animation in styles.css); an ordinary re-render
+// passes none and gets no animation, since the window hasn't moved.
+function renderLevelQueue(container, prevButton, nextButton, currentIndex, direction) {
+  const set = currentLevels();
+  const total = set.length;
+  const size = Math.min(QUEUE_WINDOW_SIZE, total);
+  const win = levelQueueWindow(container, currentIndex, total);
+  prevButton.hidden = win.start <= 0;
+  nextButton.hidden = win.start + size >= total;
+  prevButton.onclick = () => {
+    win.start = Math.max(0, win.start - QUEUE_STEP);
+    renderLevelQueue(container, prevButton, nextButton, currentIndex, "left");
+  };
+  nextButton.onclick = () => {
+    win.start = Math.min(total - size, win.start + QUEUE_STEP);
+    renderLevelQueue(container, prevButton, nextButton, currentIndex, "right");
+  };
+  container.replaceChildren();
+  for (let i = 0; i < size; i++) {
+    const index = win.start + i;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = String(index + 1);
+    button.className = "level-button";
+    if (direction) button.classList.add(`enter-${direction}`);
+    if (state.solved.has(index)) button.classList.add("is-solved");
+    if (index === currentIndex) button.classList.add("is-current");
+    button.setAttribute("aria-label", `Level ${index + 1}${state.solved.has(index) ? ", solved" : ""}`);
+    button.addEventListener("click", () => startLevel(index));
+    container.append(button);
+  }
+}
+
 function renderLevels() {
   const set = currentSet();
   elements.levelsTitle.textContent = set.title;
@@ -366,31 +532,22 @@ function renderLevels() {
   const allSolved = state.solved.size >= set.levels.length;
   elements.levelsContinueButton.hidden = allSolved;
   elements.levelsContinueButton.textContent = state.solved.size === 0 ? "Start →" : "Continue →";
-  const next = firstUnsolvedLevel();
-  elements.levelsGrid.replaceChildren();
-  set.levels.forEach((_, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = String(index + 1);
-    button.className = "level-button";
-    if (state.solved.has(index)) button.classList.add("is-solved");
-    if (!allSolved && index === next) button.classList.add("is-current");
-    button.setAttribute("aria-label", `Level ${index + 1}${state.solved.has(index) ? ", solved" : ""}`);
-    button.addEventListener("click", () => startLevel(index));
-    elements.levelsGrid.append(button);
-  });
+  renderLevelQueue(elements.levelsGrid, elements.levelsQueuePrev, elements.levelsQueueNext, allSolved ? -1 : firstUnsolvedLevel());
 }
 
 function renderPlay() {
   const set = currentSet();
   elements.title.textContent = state.setKey === "crown" ? "Magma Mia!" : `Magma Mia! — ${set.title}`;
+  elements.playLevelsButton.setAttribute("aria-label", state.setKey === "crown" ? "Back to the front page" : "Back to levels");
   elements.objectiveHelp.textContent = OBJECTIVE_HELP[objectiveOf(state.levelIndex)];
   // Tags for where a push from here would drop blocks (see previewPushes).
   const chips = state.preview && !isSolved() ? previewPushes(state.current).flatMap((push) => push.landings) : [];
   drawBoard(elements.board, state.current, { chips });
+  scheduleMelt(elements.board, isSolved());
   renderStatus();
   elements.undo.disabled = state.history.length === 0;
   elements.next.hidden = !(isSolved() && state.levelIndex + 1 < currentLevels().length);
+  renderLevelQueue(elements.playLevelsGrid, elements.playQueuePrev, elements.playQueueNext, state.levelIndex);
 }
 
 function renderStatus() {

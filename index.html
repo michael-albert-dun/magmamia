@@ -6,19 +6,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f1ec">
   <title>Magma Mia!</title>
-  <link rel="stylesheet" href="styles.css?v=20260923c">
+  <link rel="stylesheet" href="styles.css?v=20260924b">
   <script src="src/engine.js?v=20260923c" defer></script>
   <script src="src/levels.js?v=20260923h" defer></script>
-  <script src="src/render.js?v=20260923f" defer></script>
-  <script src="src/play.js?v=20260923e" defer></script>
+  <script src="src/render.js?v=20260923i" defer></script>
+  <script src="src/play.js?v=20260924b" defer></script>
 </head>
 
 <body>
   <main class="app">
-    <!-- Which one of the three sections below is shown is decided by play.js
-         (state.view), toggling `hidden`. Home lists the sets of levels; Levels is
-         the picker for whichever set was chosen (or linked to with ?set=); Play is
-         the board itself. -->
+    <!-- Which one of the four sections below is shown is decided by play.js
+         (state.view), toggling `hidden`. Splash is the real front page (Seize
+         the Crown only); Home lists every set of levels (Michael's own review
+         tool, at ?set=home); Levels is the picker for whichever set was chosen
+         (or linked to with ?set=); Play is the board itself. -->
+    <section id="splash-screen" class="play-area splash" hidden>
+      <div class="hero">
+        <svg id="splash-art" class="hero-art board" role="img" aria-label="A tiny playable taste of the game: push the block into the magma to bridge it, then step across to the crown"></svg>
+        <h1 class="hero-title">Magma Mia!</h1>
+        <p class="hero-tagline">Trapped by an evil vizier in the palace dungeons, surrounded by magma, and with but a few blocks to help you on your way &mdash; can YOU <strong>seize the crown</strong>?</p>
+        <button id="enter-dungeon-button" class="enter-button" type="button">Enter the dungeon!</button>
+      </div>
+    </section>
+
     <section id="home-screen" class="play-area home" hidden>
       <header class="game-header">
         <h1>Magma Mia!</h1>
@@ -36,15 +46,17 @@
         <button id="levels-continue-button" class="text-button" type="button" hidden>Continue &rarr;</button>
       </header>
       <p id="levels-subtitle" class="subtitle"></p>
-      <div id="levels-grid" class="level-nav levels-grid" aria-label="Levels"></div>
+      <div class="level-queue">
+        <button id="levels-queue-prev" class="queue-nav" type="button" aria-label="Earlier levels">&#9664;</button>
+        <div id="levels-grid" class="levels-grid" aria-label="Levels"></div>
+        <button id="levels-queue-next" class="queue-nav" type="button" aria-label="Later levels">&#9654;</button>
+      </div>
     </section>
 
     <section id="play-screen" class="play-area game" hidden>
-      <header class="game-header">
-        <div class="header-left">
-          <button id="play-levels-button" class="text-button" type="button">&larr; Levels</button>
-          <h1 id="game-title">Magma Mia!</h1>
-        </div>
+      <header class="game-header game-header-centered">
+        <button id="play-levels-button" class="text-button icon-only" type="button" aria-label="Back to levels">&larr;</button>
+        <h1 id="game-title">Magma Mia!</h1>
         <button id="info-button" class="icon-button" type="button" aria-label="How to play" aria-expanded="false" aria-controls="info-panel">i</button>
       </header>
 
@@ -53,15 +65,13 @@
           <li id="objective-help">Seize the crown!</li>
           <li>Walk with the arrow keys or WASD, the buttons below, or by tapping a square next to you.</li>
           <li>Walk into a stack of blocks to push it over. It topples away from you and drops one block on each of the next squares in a line, as many as the stack was tall.</li>
-          <li>A block dropped on lava makes it one shallower; lava with nothing left is safe floor. Blocks that fall off the edge are lost, and blocks that hit a wall pile up against it.</li>
-          <li>A darker, wet-sand block is waterlogged mud: dropped on lava it fills it completely, however deep (but not the infinite lava around the edge). Touching a waterlogged block waterlogs the rest of that stack too.</li>
+          <li>A block dropped on magma makes it one shallower; magma with nothing left is safe floor. Blocks that fall off the edge are lost, and blocks that hit a wall pile up against it.</li>
           <li>Blocks can land on the crown and cover it. Push them off to uncover it.</li>
-          <li>A small purple flask on the floor is a potion: pick it up by walking onto it. It buys exactly one otherwise-fatal step onto lava, then it's used up -- so the step right after that one still has to land somewhere safe. It doesn't work on the swirling abyss around the edge, which is always fatal. While you're carrying a potion, the ring around the player turns green.</li>
-          <li>Stepping into lava, or off the edge, is fatal: the level restarts. There is no limit on undo.</li>
+          <li>Stepping into magma, or off the edge, is fatal: the level restarts. There is no limit on undo.</li>
         </ul>
         <label class="field-check">
           <input id="gentle-lava" type="checkbox">
-          <span>Gentle lava: refuse the move instead of dying</span>
+          <span>Gentle magma: refuse the move instead of dying</span>
         </label>
         <label class="field-check">
           <input id="show-preview" type="checkbox">
@@ -79,12 +89,12 @@
         <button id="undo-button" type="button">Undo</button>
         <button id="restart-button" type="button">Restart</button>
         <button id="next-button" type="button" hidden>Next level</button>
-        <div class="dpad" aria-label="Move">
-          <button class="dpad-up" data-dir="up" type="button" aria-label="Move up">↑</button>
-          <button class="dpad-left" data-dir="left" type="button" aria-label="Move left">←</button>
-          <button class="dpad-down" data-dir="down" type="button" aria-label="Move down">↓</button>
-          <button class="dpad-right" data-dir="right" type="button" aria-label="Move right">→</button>
-        </div>
+      </div>
+
+      <div class="level-queue">
+        <button id="play-queue-prev" class="queue-nav" type="button" aria-label="Earlier levels">&#9664;</button>
+        <div id="play-levels-grid" class="levels-grid" aria-label="Jump to a level"></div>
+        <button id="play-queue-next" class="queue-nav" type="button" aria-label="Later levels">&#9654;</button>
       </div>
     </section>
   </main>
