@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { move, isWon, hasClosedBorder } = require("../src/engine.js");
 const { analyse, regionOf } = require("../src/solver.js");
-const { buildByReversal } = require("../src/generator.js");
+const { buildByReversal, buildByReversalWithPotion } = require("../src/generator.js");
 
 function mulberry32(seed) {
   let a = seed;
@@ -116,6 +116,92 @@ test("soak steps mark the stack put back wet, and the sequence (played through t
 // without ever touching that cell -- isn't something a single reverse step can
 // promise; only checking the actual solver's dried-back result can (which is what
 // experiments/mud-candidates.js's evaluate() does before accepting a candidate).
+
+// Play a potion level's reconstructed sequence: the pickup and the crossing are
+// each a single directional move (not a push), so they're replayed the same way
+// generator.test.js's plain replay() replays pushes -- teleport to the cell
+// the move is made from, then let the real engine do the rest.
+function replayWithPotion(built) {
+  let state = built.level;
+  const pickup = move(state, built.potionApproachDir);
+  assert.equal(pickup.result, "moved");
+  assert.equal(pickup.pickedUpPotion, true);
+  state = pickup.state;
+
+  for (const { from, dir } of built.sequenceBefore) {
+    const outcome = move({ ...state, player: from }, dir);
+    assert.equal(outcome.result, "pushed", "every recorded 'before' push must be a real push");
+    state = outcome.state;
+  }
+
+  const crossed = move({ ...state, player: built.crossing.from }, built.crossing.dir);
+  assert.equal(crossed.result, "moved");
+  assert.equal(crossed.usedPotion, true);
+  state = crossed.state;
+
+  for (const { from, dir } of built.sequenceAfter) {
+    const outcome = move({ ...state, player: from }, dir);
+    assert.equal(outcome.result, "pushed", "every recorded 'after' push must be a real push");
+    state = outcome.state;
+  }
+  return state;
+}
+
+test("potion levels: reverse-built levels are always solved by their own reconstructed sequence", () => {
+  const rng = mulberry32(42);
+  let built = 0;
+  let withBeforePushes = 0;
+  let withAfterPushes = 0;
+  for (let attempt = 0; attempt < 1500 && built < 100; attempt += 1) {
+    const result = buildByReversalWithPotion(rng);
+    if (!result) continue;
+    built += 1;
+    assert.equal(hasClosedBorder(result.level), true);
+    assert.equal(result.level.potions[result.potionCell], 1);
+    assert.equal(result.stepKinds.includes("cross"), true);
+    if (result.sequenceBefore.length > 0) withBeforePushes += 1;
+    if (result.sequenceAfter.length > 0) withAfterPushes += 1;
+
+    const finalState = replayWithPotion(result);
+    assert.equal(regionOf(finalState).reachesGoal, true, "the reconstructed sequence must win");
+  }
+  assert.ok(built >= 60, `only built ${built} levels`);
+  assert.ok(withBeforePushes > 10, `only ${withBeforePushes} levels had pushes before the crossing`);
+  assert.ok(withAfterPushes > 10, `only ${withAfterPushes} levels had pushes after the crossing`);
+});
+
+// Construction alone doesn't guarantee the potion is necessary, and even once it
+// is, the *recorded* pushes before/after the crossing might not be -- the same
+// lesson mud-candidates.js already learned (see generator.js's "soak" comment):
+// the rest of the build can supply an unrelated route the construction never
+// anticipated. buildByReversalWithPotion now checks both per phase and retries
+// on the spot rather than trusting construction (see its own comment), which
+// raised both rates a lot -- was ~5-10% necessary and ~0% also tight, now
+// comfortably higher. Still a rejection-sampling rate, not a guarantee, so this
+// checks a floor, not "all of them".
+test("potion levels: are necessary (the real solver can't win without the potion) and tight (the recorded pushes on both sides of the crossing are the true minimum)", () => {
+  const rng = mulberry32(42);
+  let built = 0;
+  let necessary = 0;
+  let tight = 0;
+  for (let attempt = 0; attempt < 1500 && built < 100; attempt += 1) {
+    const result = buildByReversalWithPotion(rng);
+    if (!result) continue;
+    built += 1;
+    if (analyse(result.level, { objective: "reach", full: false }).solvable) continue;
+    necessary += 1;
+
+    const beforeGoals = new Uint8Array(result.level.cells.length);
+    beforeGoals[result.crossing.from] = 1;
+    const beforeTrue = analyse({ ...result.level, goals: beforeGoals }, { objective: "reach", full: false });
+    const afterTrue = analyse({ ...result.level, player: result.crossing.cell, carried: 0 }, { objective: "reach", full: false });
+    if (beforeTrue.solvable && beforeTrue.pushes === result.sequenceBefore.length &&
+        afterTrue.solvable && afterTrue.pushes === result.sequenceAfter.length) tight += 1;
+  }
+  assert.ok(built >= 60, `only built ${built} levels`);
+  assert.ok(necessary >= 25, `only ${necessary}/${built} candidates had a necessary potion`);
+  assert.ok(tight >= 20, `only ${tight}/${built} candidates were also tight`);
+});
 
 test("transport steps carry blocks without leaving lava, and the sequence still wins", () => {
   const rng = mulberry32(9);

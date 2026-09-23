@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { parseLevel, move, isWon } = require("../src/engine.js");
-const { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, forcedPushStacks, regionOf } = require("../src/solver.js");
+const { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, forcedPushStacks, regionOf, potionRegions } = require("../src/solver.js");
 const { PRESET_LEVELS } = require("../src/levels.js");
 const { solve } = require("./solve.js");
 
@@ -250,4 +250,31 @@ test("forcedPushStacks finds single-direction stacks and whether the push is in 
   assert.deepEqual(forcedPushStacks(parseLevel("#######\n#@#.A~#\n#######")).map((f) => [f.cell, f.name, f.clear]), [[11, "right", false]]);
   // A stack in open floor has several pushes, so it isn't forced.
   assert.deepEqual(forcedPushStacks(parseLevel(".....\n.@A..\n.....")), []);
+});
+
+test("potionRegions: a goal only reachable by crossing lava is in spent, not carrying", () => {
+  const state = parseLevel("@!a.*");
+  const { carrying, spent } = potionRegions(state);
+  const goal = state.goals.findIndex((g) => g === 1);
+  assert.equal(carrying.has(goal), false);
+  assert.equal(spent.has(goal), true);
+});
+
+test("potionRegions: a goal reachable without lava at all stays out of spent, even though a lava crossing also reaches it", () => {
+  // Walking down and around the lava cell reaches the goal without a potion, so
+  // crossing the lava directly above it is never necessary -- carrying the potion
+  // never hurts, so that route shouldn't add the goal to `spent` too.
+  const state = parseLevel("@.a.*\n....");
+  const { carrying, spent } = potionRegions(state);
+  const goal = state.goals.findIndex((g) => g === 1);
+  assert.equal(carrying.has(goal), true);
+  assert.equal(spent.has(goal), false);
+});
+
+test("potionRegions: the abyss never counts as something the potion can be spent on", () => {
+  const state = parseLevel("@~.*");
+  const { carrying, spent } = potionRegions(state);
+  const goal = state.goals.findIndex((g) => g === 1);
+  assert.equal(carrying.has(goal), false, "cut off by the abyss, not reachable at all");
+  assert.equal(spent.has(goal), false, "a potion can't buy a step onto the abyss");
 });

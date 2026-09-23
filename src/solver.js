@@ -47,6 +47,71 @@ function regionOf(state) {
   return { region, reachesGoal, lowest };
 }
 
+// Floor cells reachable by walking from `start`, which counts as reachable even
+// when it isn't itself floor -- used to seed a flood-fill from a lava cell the
+// player is imagined to already be standing on (see potionRegions). From there
+// on the walk is ordinary: stacks, lava, infinite lava and walls all stop it.
+function walkableFrom(state, start) {
+  const { cols, rows, cells, walls } = state;
+  const abyss = state.abyss;
+  const seen = new Set([start]);
+  const pending = [start];
+  while (pending.length > 0) {
+    const c = pending.pop();
+    const x = c % cols;
+    const y = (c - x) / cols;
+    for (const name of SOLVER_DIRS) {
+      const { dx, dy } = solverEngine.DIRECTIONS[name];
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
+      const n = ny * cols + nx;
+      if (seen.has(n) || walls[n] || (abyss && abyss[n]) || cells[n] !== 0) continue;
+      seen.add(n);
+      pending.push(n);
+    }
+  }
+  return seen;
+}
+
+// Where the player could walk (no pushes) if they had exactly one potion charge
+// to spend crossing a single finite-lava cell along the way -- independent of
+// whatever `state.carried`/`state.potions` actually say, since this answers a
+// hypothetical ("if carrying one, what opens up") used to check that a level's
+// real potion is necessary, not to replay an actual game state.
+//   carrying  reachable without ever touching lava: ordinary walking, exactly
+//             regionOf's region, so the potion is still available afterwards.
+//   spent     reachable only by spending the potion on some finite-lava cell
+//             adjacent to `carrying` (never infinite lava/the abyss: a potion
+//             can't buy that step -- see move() in engine.js), then walking on
+//             from there. Cells already in `carrying` are left out: carrying
+//             the potion never hurts, so there's no reason to spend it on a
+//             cell reachable anyway.
+// A level's potion is necessary exactly when its goal is in `spent`: reachable
+// only by using it, not without.
+function potionRegions(state) {
+  const { cols, rows, cells, walls } = state;
+  const abyss = state.abyss;
+  const carrying = walkableFrom(state, state.player);
+  const spent = new Set();
+  for (const c of carrying) {
+    const x = c % cols;
+    const y = (c - x) / cols;
+    for (const name of SOLVER_DIRS) {
+      const { dx, dy } = solverEngine.DIRECTIONS[name];
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
+      const n = ny * cols + nx;
+      // Only a finite-lava neighbour is a place the potion can be spent.
+      if (walls[n] || (abyss && abyss[n]) || cells[n] >= 0) continue;
+      for (const reached of walkableFrom(state, n)) spent.add(reached);
+    }
+  }
+  for (const c of carrying) spent.delete(c);
+  return { carrying, spent };
+}
+
 function stateKey(state) {
   let key = "";
   const wet = state.wet;
@@ -410,5 +475,5 @@ function trivialDisposalStacks(state) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, forcedPushStacks, regionOf };
+  module.exports = { analyse, solutionEvents, solutionCoupling, trivialDisposalStacks, forcedPushStacks, regionOf, potionRegions };
 }
