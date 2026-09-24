@@ -2,7 +2,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { parseLevel, formatLevel, hasClosedBorder, move, previewPushes, isWon } = require("../src/engine.js");
-const { regionOf } = require("../src/solver.js");
 
 // Apply each direction in turn (ignoring refusals and deaths) and return the
 // resulting level text.
@@ -318,19 +317,27 @@ test("gentle lava doesn't change how a potion works: it still succeeds and is sp
   assert.equal(crossed.usedPotion, true);
 });
 
+// Every POTION_LEVELS entry now hands the player the robe already worn
+// (`carried: 1` on the level, applied here the same way startLevel in play.js
+// does it) instead of an on-board `!` to walk onto -- see the comment above
+// POTION_LEVELS in levels.js.
+function startProtected(level) {
+  return { ...parseLevel(level.text), carried: level.carried };
+}
+
 test("the potion tutorial level plays through as intended", () => {
   const { POTION_LEVELS } = require("../src/levels.js");
-  let state = parseLevel(POTION_LEVELS[0].text);
+  let state = startProtected(POTION_LEVELS[0]);
   for (const dir of ["right", "right", "right", "right", "right"]) state = move(state, dir).state;
   assert.equal(isWon(state, "reach"), true);
 });
 
 test("the potion+pushing tutorial level (potions and a hop-and-return push) plays through as intended", () => {
   const { POTION_LEVELS } = require("../src/levels.js");
-  let state = parseLevel(POTION_LEVELS[1].text);
+  let state = startProtected(POTION_LEVELS[1]);
   const moves = [
-    "right", "right", // walk to the potion, pick it up
-    "down", // step onto the lava band, potion-protected
+    "right", "right", // walk to where the lava band starts
+    "down", // step onto the lava band, robe-protected
     "down", // push B down: hops the goal cell (shallows it, doesn't fill it), leaves a block one row further on
     "left", "left", "down", "down", "down", "right", "right", // the U-turn to approach from below
     "up", // push the landed block back up, filling the goal cell
@@ -342,93 +349,6 @@ test("the potion+pushing tutorial level (potions and a hop-and-return push) play
     state = outcome.state;
   }
   assert.equal(isWon(state, "reach"), true);
-});
-
-test("the third potion level (a second tutorial) plays through as intended", () => {
-  const { POTION_LEVELS } = require("../src/levels.js");
-  let state = parseLevel(POTION_LEVELS[2].text);
-  const moves = [
-    "right", "right", "right", // walk to the potion, pick it up
-    "down", // step onto the lava band, potion-protected
-    "down", // walk down to the box
-    "left" // push the box off the goal
-  ];
-  for (const dir of moves) {
-    const outcome = move(state, dir);
-    assert.notEqual(outcome.result, "died", `died on move "${dir}": ${outcome.reason}`);
-    state = outcome.state;
-  }
-  assert.equal(isWon(state, "reach"), true);
-});
-
-// Levels 4 on are generated (see the comment above POTION_LEVELS), so unlike the
-// hand-built ones above there's no walked-through solution to narrate in
-// direction names -- this replays the exact sequence experiments/potion-candidates.js
-// captured at generation time, teleporting to each push's cell the same way
-// generator.test.js's own replay() does (the player can walk anywhere in their
-// region between pushes, so where they came from doesn't matter to move()).
-function playGeneratedPotionLevel(text, potionApproachDir, crossing, sequenceBefore, sequenceAfter) {
-  let state = parseLevel(text);
-  // potionApproachDir is relative to the level's own starting cell, so the
-  // pickup has to happen first, before any teleport-to-a-push-cell moves the
-  // player away from it.
-  const pickup = move(state, potionApproachDir);
-  assert.equal(pickup.pickedUpPotion, true);
-  state = pickup.state;
-  for (const { from, dir } of sequenceBefore) {
-    const outcome = move({ ...state, player: from }, dir);
-    assert.equal(outcome.result, "pushed");
-    state = outcome.state;
-  }
-  const crossed = move({ ...state, player: crossing.from }, crossing.dir);
-  assert.equal(crossed.usedPotion, true);
-  state = crossed.state;
-  for (const { from, dir } of sequenceAfter) {
-    const outcome = move({ ...state, player: from }, dir);
-    assert.equal(outcome.result, "pushed");
-    state = outcome.state;
-  }
-  return state;
-}
-
-test("the fourth potion level (generated) plays through as intended", () => {
-  const { POTION_LEVELS } = require("../src/levels.js");
-  const state = playGeneratedPotionLevel(
-    POTION_LEVELS[3].text, "down", { from: 9, dir: "right" },
-    [{ from: 25, dir: "up" }],
-    [{ from: 27, dir: "down" }, { from: 50, dir: "up" }]
-  );
-  assert.equal(regionOf(state).reachesGoal, true);
-});
-
-test("the fifth potion level (generated) plays through as intended", () => {
-  const { POTION_LEVELS } = require("../src/levels.js");
-  const state = playGeneratedPotionLevel(
-    POTION_LEVELS[4].text, "down", { from: 33, dir: "down" },
-    [{ from: 12, dir: "left" }, { from: 10, dir: "down" }, { from: 30, dir: "left" }],
-    [{ from: 46, dir: "left" }]
-  );
-  assert.equal(regionOf(state).reachesGoal, true);
-});
-
-test("the sixth potion level (generated) plays through as intended", () => {
-  const { POTION_LEVELS } = require("../src/levels.js");
-  const state = playGeneratedPotionLevel(
-    POTION_LEVELS[5].text, "right", { from: 50, dir: "up" },
-    [{ from: 51, dir: "left" }],
-    [{ from: 13, dir: "down" }, { from: 45, dir: "left" }]
-  );
-  assert.equal(regionOf(state).reachesGoal, true);
-});
-
-test("the seventh potion level (generated) plays through as intended", () => {
-  const { POTION_LEVELS } = require("../src/levels.js");
-  const state = playGeneratedPotionLevel(
-    POTION_LEVELS[6].text, "right", { from: 51, dir: "right" },
-    [{ from: 26, dir: "down" }],
-    [{ from: 54, dir: "up" }, { from: 30, dir: "left" }, { from: 28, dir: "down" }]
-  );
-  assert.equal(regionOf(state).reachesGoal, true);
 });
 
 test("push previews put lost blocks on the infinite lava cell that swallows them", () => {

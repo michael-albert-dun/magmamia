@@ -6,11 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f1ec">
   <title>Magma Mia!</title>
-  <link rel="stylesheet" href="styles.css?v=20260924e">
+  <link rel="stylesheet" href="styles.css?v=20260924o">
   <script src="src/engine.js?v=20260923c" defer></script>
-  <script src="src/levels.js?v=20260923h" defer></script>
-  <script src="src/render.js?v=20260924d" defer></script>
-  <script src="src/play.js?v=20260924b" defer></script>
+  <script src="src/levels.js?v=20260924r" defer></script>
+  <script src="src/render.js?v=20260924j" defer></script>
+  <script src="src/play.js?v=20260924i" defer></script>
 </head>
 
 <body>
@@ -26,6 +26,7 @@
         <h1 class="hero-title">Magma Mia!</h1>
         <p class="hero-tagline">Trapped by an evil vizier in the palace dungeons, surrounded by magma, and with but a few blocks to help you on your way &mdash; can YOU <strong>seize the crown</strong>?</p>
         <button id="enter-dungeon-button" class="enter-button" type="button">Enter the dungeon!</button>
+        <button id="get-help-button" class="enter-button" type="button">With a little help</button>
       </div>
     </section>
 
@@ -63,11 +64,9 @@
       <div id="info-panel" class="info-panel" hidden>
         <ul>
           <li id="objective-help">Seize the crown!</li>
-          <li>Walk with the arrow keys or WASD, the buttons below, or by tapping a square next to you.</li>
-          <li>Walk into a stack of blocks to push it over. It topples away from you and drops one block on each of the next squares in a line, as many as the stack was tall.</li>
-          <li>A block dropped on magma makes it one shallower; magma with nothing left is safe floor. Blocks that fall off the edge are lost, and blocks that hit a wall pile up against it.</li>
-          <li>Blocks can land on the crown and cover it. Push them off to uncover it.</li>
-          <li>Stepping into magma, or off the edge, is fatal: the level restarts. There is no limit on undo.</li>
+          <li id="robe-help" hidden>The wizard has given you a magical robe, which will protect you the first time you step on the magma.</li>
+          <li>Walk into a stack of blocks to push it over. It topples away from you.</li>
+          <li>A block dropped on magma makes it one shallower. Blocks that fall into the abyss are lost, and blocks that hit a wall pile up against it.</li>
         </ul>
         <label class="field-check">
           <input id="gentle-lava" type="checkbox">
@@ -77,10 +76,17 @@
           <input id="show-preview" type="checkbox">
           <span>Preview where a push's blocks would land</span>
         </label>
+        <label class="field-check">
+          <input id="show-commentary" type="checkbox" checked>
+          <span>Comment on each move</span>
+        </label>
       </div>
 
-      <div id="board-wrap" class="board-wrap">
-        <svg id="board" class="board" role="img" aria-label="Game board"></svg>
+      <div id="board-stage" class="board-stage">
+        <div id="board-wrap" class="board-wrap">
+          <svg id="board" class="board" role="img" aria-label="Game board"></svg>
+        </div>
+        <svg id="solved-badge" class="solved-badge" role="img"></svg>
       </div>
 
       <p id="status" class="status" aria-live="polite"></p>

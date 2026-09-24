@@ -1,0 +1,62 @@
+[
+  {
+    "text": "~~~##~#~\n#b.A..b*#\n#....b.~\n#@C.c..#\n~.a....~\n~.Cb...#\n~#..##.#\n#####~#~",
+    "score": 72,
+    "passes": true,
+    "pushes": 10,
+    "solutions": 1,
+    "sequences": 1,
+    "slack": 3,
+    "decorative": 0,
+    "events": [
+      "hop",
+      "pile",
+      "shuffle",
+      "stack"
+    ],
+    "tempting": 2,
+    "dead": 0.5694268755473387,
+    "states": 10277,
+    "endPositions": 27,
+    "optimalEndPositions": 1
+  },
+  {
+    "text": "~~#~#~~~\n~.@....~\n#.Bc..a*~\n#.Ab.a.#\n~.#.#..~\n~...#B.#\n#..c...~\n#~#~~#~#",
+    "score": 58.146964856230035,
+    "passes": true,
+    "pushes": 7,
+    "solutions": 2,
+    "sequences": 2,
+    "slack": 1,
+    "decorative": 0,
+    "events": [
+      "hop",
+      "pile",
+      "shuffle",
+      "stack"
+    ],
+    "tempting": 1,
+    "dead": 0.35782747603833864,
+    "states": 313,
+    "endPositions": 7,
+    "optimalEndPositions": 1
+  },
+  {
+    "text": "~##~~#~~\n#.a.A..#\n#..#.ba#\n~..Da.A#\n~a.a...#\n#.*b.@..~\n~..#...~\n~~#~####",
+    "score": 51,
+    "passes": true,
+    "pushes": 10,
+    "solutions": 2,
+    "sequences": 2,
+    "slack": 2,
+    "decorative": 0,
+    "events": [
+      "pile"
+    ],
+    "tempting": 0,
+    "dead": 0.5986238532110092,
+    "states": 436,
+    "endPositions": 13,
+    "optimalEndPositions": 2
+  }
+]

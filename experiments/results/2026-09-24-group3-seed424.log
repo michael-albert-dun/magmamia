@@ -1,0 +1,3 @@
+# command: node experiments/find-levels.js --seed 424 --restarts 1000 --steps 500 --top 40 --max-minutes 60 --slack off --min-end-positions 2 --max-dead 0.9 --json experiments/results/2026-09-24-seize-the-crown-group3-seed424.json
+seed 424: 45959 evaluations in 3600.3s, 0 levels pass the filters
+

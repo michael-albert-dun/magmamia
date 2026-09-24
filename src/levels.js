@@ -1394,62 +1394,69 @@ const MUD_ROUND_2 = [
   }
 ];
 
-// Potions (no name for this one yet): an item on the floor, picked up by walking onto
-// it, that buys exactly one otherwise-fatal step onto lava before it's used up (see
-// README). New enough that the exact solver doesn't understand it yet -- regionOf in
-// src/solver.js treats lava as always impassable, so analyse() would wrongly call this
-// unsolvable -- so unlike every other set, this one isn't checked by running the
-// solver over it in tests/levels.test.js; tests/engine.test.js plays the exact move
-// sequence through the real engine instead, and there's no `optimum` on any of these
-// levels since the solver can't rate them.
+// "Get a little help" (formerly "Potions", no name for the mechanic itself
+// yet): the player starts each of these levels already wearing the robe of
+// protection -- `carried: 1` below, applied on top of the parsed level by
+// startLevel in play.js -- rather than picking an item up mid-level, since
+// every one of these levels put the potion within immediate reach of the
+// start anyway, making the walk-there-first step pure ceremony. The engine's
+// own carried-charge mechanic (buys exactly one otherwise-fatal step onto lava
+// before it's used up, see README) is unchanged; only how these levels hand
+// the player that first charge is different, so there's no `!` pickup left in
+// any of the text below. New enough that the exact solver doesn't understand
+// it yet -- regionOf in src/solver.js treats lava as always impassable, so
+// analyse() would wrongly call this unsolvable -- so unlike every other set,
+// this one isn't checked by running the solver over it in tests/levels.test.js;
+// tests/engine.test.js plays the exact move sequence through the real engine
+// instead, and there's no `optimum` on any of these levels since the solver
+// can't rate them.
 //
-// Levels 4 on are generated (via src/generator.js's buildByReversalWithPotion
-// and experiments/potion-candidates.js), rather than hand-built like 1-3.
-// An earlier round of four was pulled after turning out trivial: the potion was
-// checked necessary, but the pushes recorded before/after the crossing weren't
-// (buildByReversalWithPotion placed the goal by a "clear the whole board and see
-// what's reachable" trick that couldn't tell newly-opened floor from floor that
-// was just sitting there empty the whole time, so the goal kept landing
-// somewhere already walkable without ever doing the recorded pushes, and the
-// same applied to the pushes leading up to the crossing). Fixed by checking
-// each phase against the real solver right after building it and retrying from
-// scratch if its pushes turn out not to be the true minimum, rather than
-// trusting construction (see buildByReversalWithPotion's own comment); this
-// round is generated with that fix in place, with `minPushesBefore: 1` so the
-// movement between picking the potion up and reaching the crossing always
-// involves at least one push too.
+// Levels 3 and 4 are retrofits (see experiments/robe-retrofit.js), not
+// generator output. Everything else tried was dropped, for two sharper tests that
+// the retrofit now applies to every candidate cell (and tests/robe-levels.test.js
+// to every level here):
+//  - cheese: without ever spending the robe, can the player reach a cell next to
+//    a still-lava goal and just step on, skipping the intended solve? ("Goal
+//    already on lava" alone is neither necessary nor sufficient for that.) Seed
+//    421's first two levels and all of seed 425's failed this from every
+//    essential cell; the earlier generated levels and the first hand-picked
+//    generated round did too.
+//  - walk-only: can the robe alone win, by walking through one bit of magma with
+//    no pushes at all? Six retrofits (from seeds 404, 405, 421, 423 and 426) were
+//    that, so a level that needs the robe *and* the pushes is what's left.
+// #1 is the exception to walk-only: it's the tutorial, and walking through the
+// magma is the whole point.
 //
-// Being necessary and tight doesn't mean *compact*, though: the generator's
-// default board is mostly open floor with a handful of walls sprinkled in, so
-// a short phase's pushes can easily end up confined to one corner, leaving the
-// rest of a big board just empty walkable space (level 3 above was originally
-// generated this way -- almost the whole left half of the board was dead
-// space, and got replaced by the small hand-built idea Michael spotted in the
-// corner that was actually doing something). Worth a generator-side fix later
-// (see docs/puzzle-generation-research.md) rather than something these levels
-// individually work around.
+// An earlier round of generated levels was pulled after turning out trivial (the
+// potion was checked necessary, but the recorded pushes weren't); see
+// buildByReversalWithPotion in src/generator.js for the fix and
+// docs/puzzle-generation-research.md for the wider issue of generated boards
+// being mostly empty floor.
 const POTION_LEVELS = [
   {
-    // #1: the tutorial. Walk to the potion, pick it up, and use it to survive the one
-    // step of lava between here and the crown.
+    // #1: the tutorial. Already wearing the robe -- use it to survive the one
+    // step of lava between the start and the crown.
+    carried: 1,
     text: [
       "########",
-      "#@.!.a.*#",
+      "#@...a.*#",
       "########"
     ].join("\n")
   },
+
   {
-    // #2: potions and pushing together. Pick up the potion, step onto the lava band
-    // with it (a push is safe from there -- it's the target cell that matters, not
-    // where the player is standing). The pushed stack hops the goal's lava cell,
-    // shallowing it without filling it and leaving a single block one row further on
-    // (a height-3 stack would drop a block on every cell of the walk-around path
-    // below, so this one is height 2). The lava band means there's no way back up, so
-    // the only route to the block is the U-turn along the left side; pushing it back
-    // finishes filling the goal cell, which is then just a walk-on.
+    // #2: the robe and pushing together. Step onto the lava band (safe -- it's
+    // the target cell that matters, not where the player is standing). The
+    // pushed stack hops the goal's lava cell, shallowing it without filling it
+    // and leaving a single block one row further on (a height-3 stack would
+    // drop a block on every cell of the walk-around path below, so this one is
+    // height 2). The lava band means there's no way back up, so the only route
+    // to the block is the U-turn along the left side; pushing it back finishes
+    // filling the goal cell, which is then just a walk-on.
+    carried: 1,
     text: [
       "#####",
-      "#@.!#",
+      "#@..#",
       "#aaa#",
       "#..B#",
       "#.ab*#",
@@ -1459,69 +1466,37 @@ const POTION_LEVELS = [
     ].join("\n")
   },
   {
-    // #3: a second, compact tutorial -- Michael's own idea, spotted in a generated
-    // level that was otherwise mostly empty space (a systemic issue with the
-    // generator, see the comment above): pick up the potion, step onto the lava
-    // band with it, then push the box off the goal to win.
+    // #3: a retrofit, not built by either generator: a dry Seize the Crown
+    // level (find-levels.js, 2026-09-24 group3, seed 423's second) with its
+    // single farthest-from-start essential floor cell (the one whose removal
+    // makes the dry level unsolvable) turned to lava. The dry level's own
+    // optimal push sequence still works unchanged; it just needs one
+    // robe-protected step across what used to be plain floor.
+    carried: 1,
     text: [
-      "#######",
-      "#@..!.#",
-      "#aaaaa#",
-      "#..B*..#",
-      "#######"
+      "#~~#~#~~",
+      "#aa.C.a~",
+      "#.*#...A~",
+      "~#@.#aa~",
+      "#..a...#",
+      "~.a..D.#",
+      "#.b..a.~",
+      "#~#~##~~"
     ].join("\n")
   },
   {
-    // #4: generated. One push to reach the crossing, two more to finish.
+    // #4: same retrofit, from the 2026-09-23 group2 results (seed 403's first
+    // level).
+    carried: 1,
     text: [
-      "##~~~~~~",
-      "~ba....~",
-      "~Ba*....~",
-      "#@a....~",
-      "~!aC...~",
-      "##Ea...#",
-      "~..a...#",
-      "~~~~~~~~"
-    ].join("\n")
-  },
-  {
-    // #5: generated. Three pushes to reach the potion and the crossing, one to
-    // finish -- most of the work happens before the crossing this time.
-    text: [
-      "~~~~~~~~",
-      "~aaB@..~",
-      "~#B.!..~",
-      "~.baaC.~",
-      "~.a...#~",
-      "~aaa*aE.~",
-      "~......~",
-      "~~#~~~~~"
-    ].join("\n")
-  },
-  {
-    // #6: generated. One push before the crossing, two after.
-    text: [
-      "~#~~~~~~",
-      "~......~",
-      "~..#.D.~",
-      "~....a.~",
-      "~..##a.~",
-      "~aaa*Da.~",
-      "~aB@!a.~",
-      "~~~~~#~#"
-    ].join("\n")
-  },
-  {
-    // #7: generated. One push before the crossing, three to finish.
-    text: [
-      "~~~~~~~#",
-      "~...#.a~",
-      "~.#...a~",
-      "~.@!aAa~",
-      "~.E#E*.a~",
-      "~.a.a.D~",
-      "~.a.a..~",
-      "~~~~~~~~"
+      "~~#~~#~~",
+      "~a*..b.@~",
+      "~.b#...~",
+      "#...aBa#",
+      "#..bE..~",
+      "~..ac..#",
+      "~.bb.a.~",
+      "~##~##~~"
     ].join("\n")
   }
 ];

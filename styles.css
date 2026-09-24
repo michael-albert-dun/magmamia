@@ -33,6 +33,11 @@
   --player-edge: #7a5c34;
   --player-cap: #c8102e;
   --player-skin: #f0c9a0;
+  /* The robe while carrying a potion (see .player.is-protected below): an
+     Okabe-Ito colour, cool against the lava's hot red, so it reads as "warded
+     against heat" rather than just "different". */
+  --player-protected: #56b4e9;
+  --player-protected-edge: #0072b2;
   --crown: #f2b600;
   --crown-edge: #7a5a00;
   /* Potions (an unnamed idea so far): reddish purple, an Okabe-Ito colour not used
@@ -94,6 +99,10 @@ textarea {
   font-weight: 600;
 }
 
+.board-stage {
+  position: relative;
+}
+
 .board-wrap {
   overflow: auto;
   border-radius: 6px;
@@ -107,6 +116,50 @@ textarea {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+}
+
+/* The "solved" display: the player wearing the crown, shown large over the
+   board in place of the melt-and-status feedback alone, for "Seize the crown"
+   levels specifically (see renderPlay in play.js -- other objectives have no
+   crown to seize, so they keep only the border melt and status line). Faded
+   and scaled in on a beat, same reasoning as .board.is-solved's delay: it
+   should read as a reaction to the win, not part of the winning move itself. */
+.solved-badge {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  /* A fixed size, not a share of the board's: the board's own aspect ratio
+     varies a lot by level (a 3-row tutorial versus a tall 8-row one), and
+     this is an overlay celebration, not something that has to fit inside the
+     board's box -- board-stage has no overflow clipping, so it's free to
+     spill slightly past a short board rather than being cropped by it. */
+  width: 132px;
+  height: auto;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 400ms ease, transform 400ms ease;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+}
+
+.solved-badge.is-shown {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Once the crown badge takes over: the board fades out completely (not just
+   its walls, see .board.is-solved above) -- no trace of the level's own floor
+   colour should linger behind the badge, just the page -- and the stage takes
+   on a fixed height, so the badge sits in the same size area whether the level
+   just solved was a 3-row tutorial or a tall 8-row board: one consistent
+   "solved" look, not one that varies with the puzzle underneath it. */
+.board-stage.is-celebrating {
+  min-height: 360px;
+}
+
+.board-stage.is-celebrating .board-wrap {
+  opacity: 0;
+  transition: opacity 400ms ease;
 }
 
 .cell-floor {
@@ -190,11 +243,33 @@ textarea {
   fill: #f4ead2;
 }
 
+/* The crown: same coarse pixel style as the player sprite (see CROWN_SPRITE in
+   render.js) -- two flat fills, no stroke, crisp block edges -- rather than a
+   smoothly-curved shape, since it's also what the player wears on the "solved"
+   display (see .solved-badge below) and the two need to read as one style. */
+.crown,
+.crown-edge {
+  pointer-events: none;
+  shape-rendering: crispEdges;
+}
+
 .crown {
   fill: var(--crown);
-  stroke: var(--crown-edge);
-  stroke-width: 1.5;
-  stroke-linejoin: round;
+}
+
+.crown-edge {
+  fill: var(--crown-edge);
+}
+
+/* The level number set into the badge crown's cartouche (see BADGE_CROWN_SPRITE
+   in render.js) -- dark against the gold, same pairing as the on-board crown
+   itself, and left un-pixelated (crisp edges are for the blocky shapes, not text). */
+.crown-number {
+  fill: var(--crown-edge);
+  font-size: 18px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
   pointer-events: none;
 }
 
@@ -219,6 +294,17 @@ textarea {
 
 .player-robe {
   fill: var(--player);
+}
+
+/* Carrying a potion (see is-protected in render.js): the robe and its trim
+   swap to the "warded against heat" colours above, so the protection is
+   visible on the player at a glance, not just in the status line's count. */
+.player.is-protected .player-robe {
+  fill: var(--player-protected);
+}
+
+.player.is-protected .player-trim {
+  fill: var(--player-protected-edge);
 }
 
 .player-skin {
@@ -603,11 +689,6 @@ code {
   animation: queue-enter-from-right 180ms ease;
 }
 
-.levels-grid .level-button.is-solved {
-  opacity: 0.55;
-  transform: scale(0.82);
-}
-
 .levels-grid .level-button.is-current {
   transform: scale(1.18);
   background: var(--goal-floor);
@@ -667,9 +748,12 @@ code {
   cursor: pointer;
 }
 
+/* Solved: the crown's own gold, at full size -- same footprint as every other
+   level button, not shrunk or faded, since it's a mark of completion to be
+   proud of rather than a dimmed-out "used up" state. */
 .level-button.is-solved {
-  border-color: var(--stack-edge);
-  background: #f6ecd0;
+  border-color: var(--crown-edge);
+  background: var(--crown);
 }
 
 .level-button.is-current {

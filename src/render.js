@@ -3,7 +3,6 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
 const CELL = 48;
 const MIN_CELL_PX = 28; // Below this the board scrolls instead of shrinking.
-const CROWN_POINTS = "-12,8 -12,-6 -6,0 0,-9 6,0 12,-6 12,8";
 
 // The player: a small blocky, early-RPG-inspired sprite -- a traveller rather
 // than a particular person, so there's no hairstyle to read as one gender or
@@ -13,9 +12,11 @@ const CROWN_POINTS = "-12,8 -12,-6 -6,0 0,-9 6,0 12,-6 12,8";
 // [class, row, startColumn, columnSpan], rather than one rect per pixel,
 // since most rows are a single solid or near-solid band.
 const PLAYER_PX = 4;
-const PLAYER_SPRITE = [
+const PLAYER_CAP = [
   ["player-cap", 0, 3, 2],   // Cap peak.
-  ["player-cap", 1, 1, 6],   // Cap brim.
+  ["player-cap", 1, 1, 6]    // Cap brim.
+];
+const PLAYER_BODY = [
   ["player-skin", 2, 1, 6],  // Forehead.
   ["player-skin", 3, 1, 1], ["player-eye", 3, 2, 1], ["player-skin", 3, 3, 2], ["player-eye", 3, 5, 1], ["player-skin", 3, 6, 1],
   ["player-skin", 4, 2, 4],  // Chin, tapering the face inward.
@@ -26,13 +27,87 @@ const PLAYER_SPRITE = [
   ["player-robe", 9, 2, 4],
   ["player-trim", 10, 2, 1], ["player-trim", 10, 5, 1] // Feet, apart, peeking out from the hem.
 ];
+const PLAYER_SPRITE = [...PLAYER_CAP, ...PLAYER_BODY];
+
+// The crown: same coarse pixel style and unit (PLAYER_PX) as the player, and
+// positioned in the player's own 8-column frame (row 0 is the cap-peak row,
+// row 1 the cap-brim row) so it drops straight onto the body in place of the
+// cap for the "solved" display (see drawSolvedBadge) -- one asset, two jobs,
+// rather than a separate smooth vector crown living in its own style.
+const CROWN_SPRITE = [
+  ["crown", -2, 3, 2],  // Centre point, taller than the two side points.
+  ["crown", -1, 1, 1], ["crown", -1, 3, 2], ["crown", -1, 6, 1], // Side points either side of the centre one.
+  ["crown", 0, 1, 6],   // Band.
+  ["crown-edge", 1, 1, 6] // Band's darker base rim.
+];
+
+function drawPixelSprite(group, blocks, ox, oy, px) {
+  for (const [cls, row, col, span] of blocks) {
+    svgElement("rect", { class: cls, x: ox + col * px, y: oy + row * px, width: span * px, height: px }, group);
+  }
+}
 
 function drawPlayerSprite(group, centerX, centerY) {
   const ox = centerX - 4 * PLAYER_PX;
   const oy = centerY - 5.5 * PLAYER_PX;
-  for (const [cls, row, col, span] of PLAYER_SPRITE) {
-    svgElement("rect", { class: cls, x: ox + col * PLAYER_PX, y: oy + row * PLAYER_PX, width: span * PLAYER_PX, height: PLAYER_PX }, group);
-  }
+  drawPixelSprite(group, PLAYER_SPRITE, ox, oy, PLAYER_PX);
+}
+
+// The crown alone, as the goal marker: centred on (centerX, centerY) at `px`
+// per pixel, independent of the player's own frame (there's no body here to
+// align to).
+function drawCrownSprite(group, centerX, centerY, px) {
+  const ox = centerX - 4 * px;
+  const oy = centerY - 1.5 * px;
+  drawPixelSprite(group, CROWN_SPRITE, ox, oy, px);
+}
+
+// A second crown, worn rather than shown alone (see drawSolvedBadge): same
+// frame and band/rim shape as CROWN_SPRITE, but with the centre point widened
+// into a one-row cartouche (cols 2-5 instead of 3-4) so a level number fits
+// inside it, and the three points sitting on top of the cartouche instead of
+// replacing it -- the side points run the cartouche's full height so they
+// read as continuous spikes, not floating separately above it. Only used at
+// the badge's larger scale -- the small on-board goal icon keeps the
+// narrower, more pointed CROWN_SPRITE.
+const BADGE_CROWN_SPRITE = [
+  ["crown", -3, 3, 2],  // Centre point's peak, taller than the two side ones.
+  ["crown", -2, 1, 1], ["crown", -2, 3, 2], ["crown", -2, 6, 1], // All three points' base.
+  ["crown", -1, 1, 1], ["crown", -1, 2, 4], ["crown", -1, 6, 1], // Side points continue; cartouche.
+  ["crown", 0, 1, 6],   // Band.
+  ["crown-edge", 1, 1, 6] // Band's darker base rim.
+];
+// Where the level-number text sits, in the same grid units as
+// BADGE_CROWN_SPRITE above. Row 0 (the band) is the same gold as row -1 (the
+// cartouche) -- only row 1 (the rim) is the darker colour -- so the two
+// combine into one gold area 2 rows tall; centring the text on their shared
+// boundary uses that full height rather than just the cartouche's own row.
+const BADGE_CROWN_NUMBER_COL = 4; // Midpoint of cols 2-5.
+const BADGE_CROWN_NUMBER_ROW = -0.5; // Boundary between row -1 and row 0.
+
+// The "solved" display: the player at 3x linear size, wearing the crown
+// instead of the cap, with the level number set into the crown's cartouche.
+// Draws into `svg`, replacing whatever was there and sizing its own viewBox,
+// so the caller just needs an empty <svg> to point at.
+const SOLVED_SCALE = 3;
+function drawSolvedBadge(svg, levelNumber) {
+  const px = PLAYER_PX * SOLVED_SCALE;
+  const margin = px;
+  const width = 8 * px + 2 * margin;
+  const height = 14 * px + 2 * margin; // Rows -3 (crown's peak) through 10 (feet).
+  svg.replaceChildren();
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("aria-label", `The player, wearing the crown, over level ${levelNumber}`);
+  const ox = margin;
+  const oy = margin + 3 * px; // Row -3 starts flush with the top margin.
+  const group = svgElement("g", { class: "player" }, svg);
+  drawPixelSprite(group, PLAYER_BODY, ox, oy, px);
+  drawPixelSprite(group, BADGE_CROWN_SPRITE, ox, oy, px);
+  svgElement("text", {
+    class: "crown-number",
+    x: ox + BADGE_CROWN_NUMBER_COL * px,
+    y: oy + BADGE_CROWN_NUMBER_ROW * px + px / 2
+  }, svg).textContent = String(levelNumber);
 }
 
 function svgElement(name, attributes, parent) {
@@ -155,7 +230,8 @@ function renderCell(svg, s, index, left, top) {
     }
   }
   if (index === s.player) {
-    const group = svgElement("g", { class: "player" }, svg);
+    const carrying = (s.carried || 0) > 0;
+    const group = svgElement("g", { class: carrying ? "player is-protected" : "player" }, svg);
     drawPlayerSprite(group, centerX, centerY);
   }
   // The crown goes last so it shows on top of lava, stacks and the player. With
@@ -165,6 +241,7 @@ function renderCell(svg, s, index, left, top) {
     const transform = hasNumber
       ? `translate(${centerX} ${centerY - 14}) scale(0.55)`
       : `translate(${centerX} ${centerY}) scale(1)`;
-    svgElement("polygon", { class: "crown", points: CROWN_POINTS, transform }, svg);
+    const group = svgElement("g", { transform }, svg);
+    drawCrownSprite(group, 0, 0, PLAYER_PX);
   }
 }
