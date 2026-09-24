@@ -6,6 +6,11 @@
 //       essential, once-visited floor cell on the dry solution's path (the one
 //       farthest from the start first), turn it to lava, and give the player the
 //       robe (`carried: 1`). Prints each verified level as text.
+//   ... --json-dir <dir>
+//       Also write each input's verified levels to <dir>/<input name>-robe.json,
+//       in the input's own order (null where a level had no candidate, so a
+//       level keeps its rank), for harness.html to play. Each entry has
+//       `robe: true`, since the text alone doesn't carry the robe.
 //   node experiments/robe-retrofit.js --check
 //       Cheese-check (and walk-only-check) every level in POTION_LEVELS (also run by
 //       tests/robe-levels.test.js).
@@ -17,6 +22,13 @@
 // choice of retrofit cell can block the route even when the goal stays on lava
 // -- so it's tested per candidate cell, and a rejected cell just means "try the
 // next essential cell for this level", not "discard the level".
+//
+// The timing test (robeTiming): in the intended solution the robe must be spent
+// after at least one push and before the last one. Spent before any push, the
+// retrofitted lava is just a toll gate between the start and the real puzzle
+// (the rest is the dry level unchanged); spent after the last push, the robe is
+// only a hop over the crown's moat. Either way the robe never interacts with the
+// pushing. Judged on the one intended solution, not on every solution.
 //
 // Not covered: other ways the robe could shortcut the intended solution.
 "use strict";
@@ -162,6 +174,21 @@ function canCheeseGoal(state, maxStates = 20000) {
   return false;
 }
 
+// Pushes made before and after the step that spends the robe, replaying `dirs`
+// on the robe level. `before` is null if the robe is never spent.
+function robeTiming(modified, dirs) {
+  let cur = modified;
+  let pushes = 0;
+  let before = null;
+  for (const d of dirs) {
+    const outcome = move(cur, d);
+    if (outcome.result === "pushed") pushes += 1;
+    if (outcome.usedPotion && before === null) before = pushes;
+    cur = outcome.state;
+  }
+  return { before, after: before === null ? null : pushes - before };
+}
+
 function analyseCandidate(text) {
   const state = parseLevel(text);
   const original = analyse(state, { full: true });
@@ -187,14 +214,17 @@ function analyseCandidate(text) {
   }
 
   const rejectedForCheese = [];
+  let rejectedForTiming = 0;
   for (const candidate of essentialSingleVisit) {
     const result = verifyRobeRetrofit(state, candidate.cell, expanded.dirs);
     if (!result) continue;
     const cheese = canCheeseGoal(result.modified);
     if (cheese === true || canWalkToGoal(result.modified)) { rejectedForCheese.push(candidate); continue; }
-    return { pushes: original.pushes, candidate, verified: result.modified, essentialSingleVisitCount: essentialSingleVisit.length, rejectedForCheese: rejectedForCheese.length, cheeseTruncated: cheese === "truncated" };
+    const timing = robeTiming(result.modified, expanded.dirs);
+    if (!(timing.before >= 1 && timing.after >= 1)) { rejectedForTiming += 1; continue; }
+    return { pushes: original.pushes, candidate, timing, verified: result.modified, essentialSingleVisitCount: essentialSingleVisit.length, rejectedForCheese: rejectedForCheese.length, rejectedForTiming, cheeseTruncated: cheese === "truncated" };
   }
-  return { pushes: original.pushes, candidate: null, essentialSingleVisitCount: essentialSingleVisit.length, rejectedForCheese: rejectedForCheese.length };
+  return { pushes: original.pushes, candidate: null, essentialSingleVisitCount: essentialSingleVisit.length, rejectedForCheese: rejectedForCheese.length, rejectedForTiming };
 }
 
 // The other failure mode: the robe alone solves it. Can the player win with the
@@ -219,24 +249,27 @@ function canWalkToGoal(state) {
   return false;
 }
 
-module.exports = { canCheeseGoal, canWalkToGoal, analyseCandidate };
+module.exports = { canCheeseGoal, canWalkToGoal, analyseCandidate, expandPushPath };
 
-function retrofit(paths) {
+function retrofit(paths, jsonDir) {
   const hits = [];
   for (const path of paths) {
     const levels = JSON.parse(fs.readFileSync(path));
+    const written = levels.map(() => null);
     levels.forEach((level, idx) => {
       const r = analyseCandidate(level.text);
       const label = `${path} #${idx + 1}`;
       if (r.rejected) { console.log(`${label}: REJECTED (${r.rejected})`); return; }
       if (!r.candidate) {
-        console.log(`${label}: no candidate (${r.essentialSingleVisitCount} essential+single-visit cells, ${r.rejectedForCheese} rejected as cheesable)`);
+        console.log(`${label}: no candidate (${r.essentialSingleVisitCount} essential+single-visit cells, ${r.rejectedForCheese} rejected as cheesable, ${r.rejectedForTiming} for robe timing)`);
         return;
       }
       const cols = parseLevel(level.text).cols;
-      console.log(`${label}: candidate ${cellName(cols, r.candidate.cell)} dist=${r.candidate.dist} (of ${r.essentialSingleVisitCount}, ${r.rejectedForCheese} cheesable skipped first) -- pushes ${r.pushes}, solutions ${level.solutions}`);
+      console.log(`${label}: candidate ${cellName(cols, r.candidate.cell)} dist=${r.candidate.dist} (of ${r.essentialSingleVisitCount}, ${r.rejectedForCheese} cheesable and ${r.rejectedForTiming} badly timed skipped first) -- robe spent after ${r.timing.before} of ${r.pushes} pushes, solutions ${level.solutions}`);
       hits.push({ label, verified: r.verified });
+      written[idx] = { text: formatLevel(r.verified), robe: true, source: label, cell: cellName(cols, r.candidate.cell), pushes: r.pushes, robeAfterPushes: r.timing.before, solutions: level.solutions, score: level.score };
     });
+    if (jsonDir) fs.writeFileSync(`${jsonDir}/${require("path").basename(path, ".json")}-robe.json`, JSON.stringify(written, null, 2) + "\n");
   }
   console.log(`\n${hits.length} verified, non-cheesable candidates.\n`);
   for (const h of hits) {
@@ -257,6 +290,10 @@ function checkPotionLevels() {
 if (require.main === module) {
   const args = process.argv.slice(2);
   if (args.includes("--check")) checkPotionLevels();
-  else if (args.length) retrofit(args);
+  else if (args.length) {
+    const flag = args.indexOf("--json-dir");
+    const jsonDir = flag >= 0 ? args.splice(flag, 2)[1] : null;
+    retrofit(args, jsonDir);
+  }
   else console.log("Usage: see the header comment.");
 }

@@ -340,6 +340,15 @@ solved levels. Undo, restart and a collapsed how-to-play are on the board itself
 `bench.html` is the separate rules test bench: type in any level, pick the
 objective, and try things out. Controls are the arrow keys or WASD (Z to undo, R to
 restart), the on-screen arrows, or clicking a cell next to the player.
+`harness.html` is the level harness for looking at generated candidates: it plays the
+puzzles of a round (see "Rounds" under "Finding levels"), dry or robe, and records
+keep/maybe/reject verdicts. It needs the local server, which is how it finds the
+rounds. Keys: `[` and `]` for the previous and next level, `K`, `M`, `X` for keep,
+maybe, reject. `?round=<name>&id=d7&view=both|d|r` links to a level; the address bar
+always shows the current one. *Export verdicts* downloads a `verdicts.json` to save
+into the round's directory (matched on the level's content, so it survives a
+re-merge). `?src=<substring>` still plays loose find-levels files from
+`experiments/results/`.
 
 ## Files
 
@@ -352,6 +361,8 @@ restart), the on-screen arrows, or clicking a cell next to the player.
 - `src/generator.js`: builds a level by running the game backwards (see "Finding
   levels"). Also loadable from Node.
 - `src/play.js`, `index.html`: the game. `src/bench.js`, `bench.html`: the bench.
+  `src/harness.js`, `harness.html`: the level harness. `experiments/round.js`:
+  runs and merges a round of generation (see "Rounds").
 - `styles.css`: styles for both pages.
 - `experiments/find-levels.js`: the curated-level search. `experiments/
   dancefloor-candidates.js`, `experiments/mud-candidates.js`: the "Clear the
@@ -394,6 +405,36 @@ main finding: the tightness filter (slack of at most 2) is the bottleneck, so on
 their positions already lost). Four of them are levels 9 to 12 of the game.
 Large state spaces are the main cost: stack-heavy boards can exceed the search's
 state cap, and those levels are discarded.
+
+### Rounds
+
+A round is one generation pass plus its robe retrofits, kept in one directory,
+`experiments/rounds/<date>-<name>/`:
+
+- `D.json`: the **dry** puzzles, every seed's levels merged (duplicates collapsed)
+  and ranked by score, as `d1`, `d2`, ...
+- `R.json`: the **robe** versions, same index as D (`null` where a puzzle has none),
+  so `r7` is the retrofit of `d7`.
+- `raw/`: each seed's find-levels output and log. `round.json`: seeds, flags, the
+  retrofit filters and counts. `verdicts.json`: exported from the harness, if any.
+
+```sh
+node experiments/round.js 2026-09-25-name --seeds 431-436 --jobs 6 -- \
+  --restarts 1000 --steps 500 --top 40 --max-minutes 120 --slack off \
+  --min-end-positions 2 --max-dead 0.9
+node experiments/round.js 2026-09-25-name --merge   # rebuild D, R from raw/
+```
+
+Everything after `--` goes to `find-levels.js`. `--merge` also re-applies the retrofit
+filters without regenerating; it re-ranks D, so ids can renumber (each entry has a
+content `key`, which is what verdicts match on). The robe retrofit
+(`experiments/robe-retrofit.js`) takes an essential floor cell that the dry
+solution steps on once, turns it to lava and hands over the robe, then rejects the
+result if it is **cheesable** (the crown's neighbour is reachable without spending
+the robe), **walk-only** (the robe alone wins), or badly **timed** (the robe must be
+spent after at least one push and before the last: earlier it is only a toll gate
+in front of the dry puzzle, later only a hop over the crown's moat). The first
+round is `2026-09-24-group4`: 27 dry puzzles, 4 robe versions.
 
 ## Ideas not yet decided
 

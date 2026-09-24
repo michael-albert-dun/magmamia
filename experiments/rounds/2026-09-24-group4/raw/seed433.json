@@ -1,0 +1,22 @@
+[
+  {
+    "text": "######~~\n~a*.a.#.#\n~B.....#\n#a.#C.#~\n#..a.a@~\n~......~\n#..a...~\n~#~~~~#~",
+    "score": 68,
+    "passes": true,
+    "pushes": 11,
+    "solutions": 1,
+    "sequences": 1,
+    "slack": 1,
+    "decorative": 0,
+    "events": [
+      "cover",
+      "edge",
+      "pile"
+    ],
+    "tempting": 1,
+    "dead": 0.6149131767109295,
+    "states": 979,
+    "endPositions": 15,
+    "optimalEndPositions": 1
+  }
+]

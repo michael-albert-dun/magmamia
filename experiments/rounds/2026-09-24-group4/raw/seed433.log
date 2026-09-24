@@ -1,0 +1,13 @@
+# command: node experiments/find-levels.js --seed 433 --restarts 1000 --steps 500 --top 40 --max-minutes 120 --slack off --min-end-positions 2 --max-dead 0.9 --json experiments/results/2026-09-24-seize-the-crown-group4-seed433.json
+seed 433: 63533 evaluations in 7200.1s, 1 levels pass the filters
+
+score 68.0  pushes 11  solutions 1  slack 1  tempting 1  dead 61%  end positions 15  events cover,edge,pile  states 979
+######~~
+~a*.a.#.#
+~B.....#
+#a.#C.#~
+#..a.a@~
+~......~
+#..a...~
+~#~~~~#~
+

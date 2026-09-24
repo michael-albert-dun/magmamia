@@ -1,0 +1,39 @@
+{
+  "generated": "2026-09-24T13:57:00+12:00",
+  "note": "Migrated from experiments/results/ (per-seed files) into the round layout; find-levels output is unchanged.",
+  "findLevelsArgs": [
+    "--restarts",
+    "1000",
+    "--steps",
+    "500",
+    "--top",
+    "40",
+    "--max-minutes",
+    "120",
+    "--slack",
+    "off",
+    "--min-end-positions",
+    "2",
+    "--max-dead",
+    "0.9"
+  ],
+  "seeds": [
+    431,
+    432,
+    433,
+    434,
+    435,
+    436
+  ],
+  "retrofitFilters": [
+    "essential cell visited once by the dry solution, turned to lava",
+    "no cheese: crown's neighbour not reachable without spending the robe",
+    "not walk-only: the robe alone doesn't win",
+    "robe spent after at least one push and before the last"
+  ],
+  "merged": "2026-09-24T04:03:15.733Z",
+  "counts": {
+    "D": 27,
+    "R": 4
+  }
+}

@@ -1,0 +1,98 @@
+[
+  {
+    "text": "#~#~~~#~\n#a....*b#\n#a#b#a.~\n#.#.aa.#\n#ACC.c.#\n#.#cB..#\n#@b..E.~\n~~~~#~~#",
+    "score": 72.02325581395348,
+    "passes": true,
+    "pushes": 14,
+    "solutions": 1,
+    "sequences": 1,
+    "slack": 3,
+    "decorative": 0,
+    "events": [
+      "edge",
+      "hop",
+      "pile",
+      "stack"
+    ],
+    "tempting": 0,
+    "dead": 0.8744186046511628,
+    "states": 1075,
+    "endPositions": 3,
+    "optimalEndPositions": 1
+  },
+  {
+    "text": "~#######\n#...c..~\n~...a..~\n~#.....#\n#.a*.a.c#\n#.D....#\n~@da...#\n#~#####~",
+    "score": 66,
+    "passes": true,
+    "pushes": 11,
+    "solutions": 1,
+    "sequences": 1,
+    "slack": 3,
+    "decorative": 0,
+    "events": [
+      "hop",
+      "shuffle",
+      "stack"
+    ],
+    "tempting": 0,
+    "dead": 0.5924855491329479,
+    "states": 346,
+    "endPositions": 7,
+    "optimalEndPositions": 1
+  },
+  {
+    "text": "##~#~#~#\n~.@.a..#\n~Da.a..#\n~a.b...#\n~.A#a*..#\n~.aB..a#\n~..a...~\n##~~~~~~",
+    "score": 52,
+    "passes": true,
+    "pushes": 8,
+    "solutions": 1,
+    "sequences": 1,
+    "slack": 4,
+    "decorative": 0,
+    "events": [
+      "shuffle",
+      "stack"
+    ],
+    "tempting": 0,
+    "dead": 0.663489037178265,
+    "states": 1049,
+    "endPositions": 13,
+    "optimalEndPositions": 1
+  },
+  {
+    "text": "######~~\n~.....b~\n#..A@..#\n~....ba~\n#..b*.D.~\n~...aa.#\n#...a..#\n#~#~~~~#",
+    "score": 51.094946401225116,
+    "passes": true,
+    "pushes": 9,
+    "solutions": 2,
+    "sequences": 2,
+    "slack": 2,
+    "decorative": 0,
+    "events": [
+      "hop"
+    ],
+    "tempting": 2,
+    "dead": 0.3491577335375191,
+    "states": 653,
+    "endPositions": 8,
+    "optimalEndPositions": 1
+  },
+  {
+    "text": "~~#~~~~~\n~a..Ca*@~\n~.aa..C~\n#.....a~\n~....c.~\n#...B.c~\n~..#b..~\n#~~~###~",
+    "score": 46,
+    "passes": true,
+    "pushes": 10,
+    "solutions": 2,
+    "sequences": 2,
+    "slack": 1,
+    "decorative": 0,
+    "events": [
+      "edge"
+    ],
+    "tempting": 0,
+    "dead": 0.6578947368421053,
+    "states": 76,
+    "endPositions": 3,
+    "optimalEndPositions": 1
+  }
+]

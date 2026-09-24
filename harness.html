@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1ec">
+  <title>Magma Mia! — level harness</title>
+  <link rel="stylesheet" href="styles.css?v=20260924o">
+  <script src="src/engine.js?v=20260923c" defer></script>
+  <script src="src/render.js?v=20260924j" defer></script>
+  <script src="src/harness.js?v=20260924b" defer></script>
+  <style>
+    /* Harness-only bits, kept out of the shared stylesheet. */
+    .verdict { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 4px; }
+    .verdict input[type="text"] { flex: 1 1 160px; min-width: 0; padding: 8px; font: inherit; }
+    .verdict button[aria-pressed="true"] { font-weight: 700; outline: 2px solid currentColor; }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <section class="play-area">
+      <div class="masthead">
+        <h1>Magma Mia!</h1>
+        <p class="subtitle">Level harness — <a href="index.html">back to the game</a></p>
+      </div>
+
+      <div class="field-row">
+        <label class="field">
+          <span>Round</span>
+          <select id="round-select"></select>
+        </label>
+        <label class="field">
+          <span>Show</span>
+          <select id="view-select">
+            <option value="both">Dry and robe versions</option>
+            <option value="d">Dry puzzles only (D)</option>
+            <option value="r">Robe versions only (R)</option>
+          </select>
+        </label>
+      </div>
+      <div class="field-row">
+        <label class="field">
+          <span>Level</span>
+          <select id="level-select"></select>
+        </label>
+        <label class="field">
+          <span>Mode</span>
+          <select id="mode-select">
+            <option value="classic">Classic</option>
+            <option value="robe">Robe (one free step onto magma)</option>
+          </select>
+        </label>
+      </div>
+      <p id="level-id" class="objective"></p>
+      <p id="level-stats" class="keys-hint"></p>
+
+      <div id="board-wrap" class="board-wrap">
+        <svg id="board" class="board" role="img" aria-label="Game board"></svg>
+      </div>
+      <p id="status" class="status" aria-live="polite"></p>
+
+      <div class="controls">
+        <button id="prev-button" type="button">&larr; Prev</button>
+        <button id="undo-button" type="button">Undo</button>
+        <button id="restart-button" type="button">Restart</button>
+        <button id="next-button" type="button">Next &rarr;</button>
+      </div>
+      <p class="keys-hint">Arrow keys or WASD to move, Z to undo, R to restart, [ and ] for the previous and next level, K, M and X for keep, maybe and reject. Or click a cell next to the player.</p>
+
+      <div class="verdict">
+        <button id="keep-button" type="button" aria-pressed="false">Keep (K)</button>
+        <button id="maybe-button" type="button" aria-pressed="false">Maybe (M)</button>
+        <button id="reject-button" type="button" aria-pressed="false">Reject (X)</button>
+        <input id="note-input" type="text" placeholder="Note" aria-label="Note on this level" autocomplete="off">
+      </div>
+      <div class="verdict">
+        <button id="export-button" type="button">Export verdicts</button>
+        <span id="verdict-summary" class="keys-hint"></span>
+      </div>
+
+      <details class="panel">
+        <summary>How this works</summary>
+        <p class="keys-hint">
+          A round (<code>experiments/rounds/&lt;name&gt;/</code>, made by <code>experiments/round.js</code>) has dry
+          puzzles <code>d1, d2, …</code> ranked by score and, where a robe retrofit passed the filters, a robe
+          version <code>r1, r2, …</code> with the same number as its dry puzzle. Link to one with
+          <code>?round=&lt;name&gt;&amp;id=d7</code> (add <code>&amp;view=d</code> or <code>r</code> to limit what
+          Prev and Next step through). Needs the local server: rounds are found through its file listing.
+        </p>
+        <p class="keys-hint">
+          Verdicts are remembered in this browser while you work, and matched on the level's content, not its id.
+          <em>Export verdicts</em> downloads <code>verdicts.json</code>; put it in the round's directory and it is
+          loaded for anyone opening the round. The older <code>?src=&lt;file-name substring&gt;</code> mode still reads
+          loose files from <code>experiments/results/</code> (ids <code>&lt;seed&gt;.&lt;rank&gt;</code>).
+        </p>
+        <p id="source-note" class="keys-hint"></p>
+        <p id="load-error" class="level-error" role="alert" hidden></p>
+      </details>
+    </section>
+  </main>
+</body>
+
+</html>

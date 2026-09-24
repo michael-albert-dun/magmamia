@@ -1,0 +1,53 @@
+# command: node experiments/find-levels.js --seed 435 --restarts 1000 --steps 500 --top 40 --max-minutes 120 --slack off --min-end-positions 2 --max-dead 0.9 --json experiments/results/2026-09-24-seize-the-crown-group4-seed435.json
+seed 435: 65863 evaluations in 7201.8s, 5 levels pass the filters
+
+score 72.0  pushes 14  solutions 1  slack 3  tempting 0  dead 87%  end positions 3  events edge,hop,pile,stack  states 1075
+#~#~~~#~
+#a....*b#
+#a#b#a.~
+#.#.aa.#
+#ACC.c.#
+#.#cB..#
+#@b..E.~
+~~~~#~~#
+
+score 66.0  pushes 11  solutions 1  slack 3  tempting 0  dead 59%  end positions 7  events hop,shuffle,stack  states 346
+~#######
+#...c..~
+~...a..~
+~#.....#
+#.a*.a.c#
+#.D....#
+~@da...#
+#~#####~
+
+score 52.0  pushes 8  solutions 1  slack 4  tempting 0  dead 66%  end positions 13  events shuffle,stack  states 1049
+##~#~#~#
+~.@.a..#
+~Da.a..#
+~a.b...#
+~.A#a*..#
+~.aB..a#
+~..a...~
+##~~~~~~
+
+score 51.1  pushes 9  solutions 2  slack 2  tempting 2  dead 35%  end positions 8  events hop  states 653
+######~~
+~.....b~
+#..A@..#
+~....ba~
+#..b*.D.~
+~...aa.#
+#...a..#
+#~#~~~~#
+
+score 46.0  pushes 10  solutions 2  slack 1  tempting 0  dead 66%  end positions 3  events edge  states 76
+~~#~~~~~
+~a..Ca*@~
+~.aa..C~
+#.....a~
+~....c.~
+#...B.c~
+~..#b..~
+#~~~###~
+
